@@ -1,0 +1,59 @@
+{#-
+ # Copyright 2017 Intel Corporation
+ #
+ # Licensed under the Apache License, Version 2.0 (the "License");
+ # you may not use this file except in compliance with the License.
+ # You may obtain a copy of the License at
+ #
+ #     http://www.apache.org/licenses/LICENSE-2.0
+ #
+ # Unless required by applicable law or agreed to in writing, software
+ # distributed under the License is distributed on an "AS IS" BASIS,
+ # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+-#}
+{% extends "base.html" %}
+
+{%- block page_title %}
+<title>Thermal Stats - CLR Telemetry</title>
+{%- endblock %}
+
+{% block content %}
+
+<h1>Thermal stats</h1>
+<caption>Thermal reports by week of the current year</caption>
+
+{%- with messages = get_flashed_messages() %}
+  {%- if messages %}
+    {%- for m in messages %}
+      <p class="bg-danger" style="padding:15px; margin:5px;">{{ m }}</p>
+    {%- endfor %}
+  {%- endif %}
+{%- endwith %}
+
+<div class="row">
+    {%- if thermal_chart %}
+    <div class="col-md-12" style="min-height: 500px;">
+        <canvas id="thermal_chart" width="800" height="450"></canvas>
+    </div>
+    {%- endif %}
+</div>
+
+
+<script src="/telemetryui/static/js/thermal.js"></script>
+<script>
+    (function(){
+        telemetryUI.renderThermal(
+            document.getElementById("thermal_chart").getContext("2d"),
+            {{ thermal_chart|safe }});
+    })();
+</script>
+
+
+{% endblock %}
+
+
+{#-
+# vi: ft=jinja ts=8 et sw=4 sts=4
+#}

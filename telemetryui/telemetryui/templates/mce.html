@@ -1,0 +1,162 @@
+{#-
+ # Copyright 2016-2017 Intel Corporation
+ #
+ # Licensed under the Apache License, Version 2.0 (the "License");
+ # you may not use this file except in compliance with the License.
+ # You may obtain a copy of the License at
+ #
+ #     http://www.apache.org/licenses/LICENSE-2.0
+ #
+ # Unless required by applicable law or agreed to in writing, software
+ # distributed under the License is distributed on an "AS IS" BASIS,
+ # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+-#}
+{% extends "base.html" %}
+
+{%- block page_title %}
+<title>MCE Stats - CLR Telemetry</title>
+{%- endblock %}
+
+{% block content %}
+
+<h1>MCE stats</h1>
+<caption>MCE reports by week of the current year</caption>
+
+{%- with messages = get_flashed_messages() %}
+  {%- if messages %}
+    {%- for m in messages %}
+      <div class="alert alert-danger" role="alert">{{ m }}</div>
+    {%- endfor %}
+  {%- endif %}
+{%- endwith %}
+
+<div class="row">
+    {%- if fullmce %}
+    <div class="col-md-6" style="min-height: 500px;">
+        <canvas id="fullmce-chart-UNCA" width="800" height="450"></canvas>
+    </div>
+    <div class="col-md-6" style="min-height: 500px;">
+        <canvas id="fullmce-chart-corrected" width="800" height="450"></canvas>
+    </div>
+
+    {%- endif %}
+    <div class="col-md-12">
+    <h2>Top MCE</h2>
+    <table class="table table-bordered table-striped table-condensed" id="top-mce-table">
+        <caption>Top <select id="top-mce">
+            <option value="10">10</option>
+            {%- set options = 10 %}
+            {% if top10|length > 200 %}
+                {%- set options = 100 %}
+            {% elif top10|length > 2000 %}
+                {%- set options = 1000 %}
+            {% elif top10|length > 20000 %}
+                {%- set options = 10000 %}
+            {% endif %}
+            {%- set limit = top10|length / options %}
+            {% for _ in range(0, limit|int + 1) %}
+                {% if loop.index <= limit %}
+                    {% if (loop.index+1) * options != 10 %}
+                        <option value="{{ (loop.index+1) * options }}">{{ (loop.index+1) * options }}</option>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+        </select> MCE by machine id</caption>
+        <thead>
+            <th>#</th>
+            <th>Machine ID</th>
+            {%- for b in builds %}
+            <th>{{ b }}</th>
+            {%- endfor %}
+            <th>Total</th>
+        </thead>
+        <tbody>
+            {%- for row in top10 %}
+            <tr>
+            <th scope="row">{{ loop.index }}</th>
+            <td>
+                <a href="/telemetryui/records/1?machine_id={{ row.machine_id }}&classification=org.clearlinux%2Fmce%2F%25">{{ row.machine_id }}</a>
+            </td>
+            {%- for b in builds %}
+            {%- if row.builds[b] %}
+            <td>
+		<span data-toggle="tooltip" data-placement="left" title="{{ row.builds[b] }}">
+                {%- set width = row.builds[b] / maxcnt * 100 %}
+                <svg width="4.5em" height="1.5em" viewBox="0 0 3 1">
+                    <rect x="0" y="0" width="{{ width }}%" height="100%" />
+                </svg>
+		</span>
+            </td>
+            {%- else %}
+            <td></td>
+            {%- endif %}
+            {%- endfor %}
+            <td>{{ row.recordscnt }}</td>
+            </tr>
+            {%- endfor %}
+        </tbody>
+    </table>
+    </div>
+    <div class="col-md-6" style="min-height: 500px;">
+        <canvas id="pie-classification" width="450" height="450"></canvas>
+    </div>
+    <div class="col-md-6" style="min-height: 500px;">
+        <canvas id="bar-reports" width="450" height="450"></canvas>
+    </div>
+
+</div>
+<script>
+    $(function() {
+        $('[data-toggle="tooltip"]').tooltip()
+    });
+
+function resizeMCEtable(n) {
+    var count = 0
+    $('#top-mce-table tbody tr').each(function () {
+        count++;
+        $(this).hide();
+        if (count <= n){
+            $(this).show()
+        }
+    })
+}
+
+resizeMCEtable(10);
+
+$(document).on('change', '#top-mce', function () {
+    resizeMCEtable($(this).val());
+});
+
+</script>
+<script src="/telemetryui/static/js/mce.js"></script>
+<script>
+    (function(){
+
+        telemetryUI.renderMCEClass(
+            document.getElementById("pie-classification").getContext("2d"),
+            [{% for s in charts[0].record_stats %} "{{ s[0] }}", {% endfor %}],
+            [{% for s in charts[0].record_stats %} "{{ s[1] }}", {% endfor %}]);
+
+        telemetryUI.renderMCEReports(
+            document.getElementById("bar-reports").getContext("2d"),
+            [{% for s in charts[1].record_stats %} "{{ s[0] }}", {% endfor %}],
+            [{% for s in charts[1].record_stats %} "{{ s[1] }}", {% endfor %}]);
+
+        telemetryUI.renderFullMCE(
+            document.getElementById("fullmce-chart-UNCA").getContext("2d"),
+            document.getElementById("fullmce-chart-corrected").getContext("2d"),
+            {{ fullmce|safe }}
+        );
+
+    })();
+</script>
+
+
+{% endblock %}
+
+
+{#-
+# vi: ft=jinja ts=8 et sw=4 sts=4
+#}

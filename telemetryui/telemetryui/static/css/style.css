@@ -1,0 +1,65 @@
+.payload {
+	overflow: hidden;
+    	text-overflow: ellipsis;
+	white-space: nowrap;
+        max-width: 480px;
+	float:left;
+	color:blue;
+	width:95%;
+}
+
+.machine_id {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	max-width: 230px;
+}
+
+.ellipsize {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 200px;
+}
+
+#more_button {
+    float: right;
+    color: red;
+    width: 5%;
+}
+
+#records_page_div{
+    margin-top: 30px;
+}
+
+ul#records_pagination {
+    margin-top: 0px;
+    margin-bottom: 0px;
+}
+
+#records_page_bar {
+    display:inline;
+}
+
+#page_size_menu {
+    vertical-align: inherit;
+}
+
+.diagonal_cell {
+    color:red;
+    background-color: #F0F0F0;
+    font-weight: bold;
+}
+.dimmed_cell {
+    background-color: lightgrey;
+    font-weight: bold;
+}
+
+/* Bootstrap tooltip overrides */
+.tooltip.left .tooltip-inner {
+    background-color: #337AB7;
+}
+
+.tooltip.left .tooltip-arrow {
+    border-left-color: #337AB7;
+}

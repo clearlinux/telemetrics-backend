@@ -1,0 +1,82 @@
+{#-
+ # Copyright 2015-2017 Intel Corporation
+ #
+ # Licensed under the Apache License, Version 2.0 (the "License");
+ # you may not use this file except in compliance with the License.
+ # You may obtain a copy of the License at
+ #
+ #     http://www.apache.org/licenses/LICENSE-2.0
+ #
+ # Unless required by applicable law or agreed to in writing, software
+ # distributed under the License is distributed on an "AS IS" BASIS,
+ # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+-#}
+{% extends "base.html" %}
+
+{%- block page_title %}
+<title>Record Details ({{ record.id }}) - CLR Telemetry</title>
+{%- endblock %}
+
+{% block content %}
+<h3>Record : {{ record.id }}</h3>
+<dl class="dl-horizontal">
+    <dt>Record Id</dt>
+    <dd>{{ record.id }}</dd>
+    
+    <dt>Machine Id</dt>
+    <dd><a  href="{{ url_for('records', page=1, machine_id=record.machine_id) }}">{{  record.machine_id }}</a></dd>
+
+    <dt>Machine Type</dt>
+    <dd>{{ record.machine }}</dd>
+
+    <dt>Operating System</dt>
+    <dd>{{ record.os_name }}</dd>
+
+    <dt>Kernel Version</dt>
+    <dd>{{ record.kernel_version }}</dd>
+
+    <dt>Architecture</dt>
+    <dd>{{ record.architecture }}</dd>
+
+    <dt>Record Time</dt>
+    <dd>{{ record.tsp|local_datetime_since }}</dd>
+
+    <dt>Server Time</dt> 
+    <dd>{{ record.tsp_server|local_datetime_since }} </dd>
+
+    <dt>Build</dt>
+    <dd><a href="{{ url_for('records', page=1, build=record.build.build) }}">{{ record.build.build }}</a></dd>
+
+    <dt>Severity</dt>
+    <dd><a href="{{ url_for('records', page=1, severity=record.severity) }}">{{ record.severity }}</a></dd>
+
+    <dt>Classification</dt>
+    <dd><a id="class_link" href="{{ url_for('records', page=1, classification=record.classification.classification) }}">{{ record.classification.classification }}</a></dd>
+
+    <dt>Guilty Id</dt>
+    <dd>
+        {%- if record.guilty_id %}
+        <a href="{{ url_for('guilty_details', id=record.guilty_id) }}">{{ record.guilty_id }}</a>
+        {%- else %}
+        N/A
+        {%- endif %}
+    </dd>
+
+    <dt>Payload Format Version</dt>
+    <dd>{{ record.payload_format_version }}</dd>
+
+    <dt>External</dt>
+    <dd>{{ record.external }}</dd>
+
+    <dt>Payload</dt>
+    <dd> <pre class="prettyprint">{{ record.backtrace }}</pre></dd>
+
+</dl>
+{% endblock %}
+
+
+{#-
+# vi: ft=jinja ts=8 et sw=4 sts=4
+#}

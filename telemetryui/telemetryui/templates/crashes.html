@@ -1,0 +1,181 @@
+{#-
+ # Copyright 2015-2017 Intel Corporation
+ #
+ # Licensed under the Apache License, Version 2.0 (the "License");
+ # you may not use this file except in compliance with the License.
+ # You may obtain a copy of the License at
+ #
+ #     http://www.apache.org/licenses/LICENSE-2.0
+ #
+ # Unless required by applicable law or agreed to in writing, software
+ # distributed under the License is distributed on an "AS IS" BASIS,
+ # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+-#}
+{% extends "base.html" %}
+
+{%- block page_title %}
+<title>Crash Stats - CLR Telemetry</title>
+{%- endblock %}
+
+{% block content %}
+
+    <h1>Crash stats</h1>
+    <h2>Top Crashes</h2>
+
+    {%- with messages = get_flashed_messages(with_categories=true) %}
+    {%- if messages %}
+    {%- for category, m in messages %}
+    <div class="alert alert-{{ category }} col-md-5" role="alert">{{ m }}</div>
+    {%- endfor %}
+    {%- endif %}
+    {%- endwith %}
+
+    <div class="row">
+
+    {%- if guilties %}
+    <table class="table table-bordered table-striped table-condensed">
+        <caption>Top 10 crashes in the last 7 days, with frequency per build</caption>
+        <thead>
+            <th>#</th>
+            <th>Guilty</th>
+            <th><a href="{{ url_for('crashes_filter', filter='overall') }}">Total</a></th>
+            {%- for b in builds %}
+            {%- set currentbuild = b[0] %}
+            <th><a href="{{ url_for('crashes_filter', filter=currentbuild) }}">{{ b[0] }}</a></th>
+            {%- endfor %}
+            <th>Comment</th>
+        </thead>
+        <tbody>
+            {%- set maxtotal = guilties[0].total %}
+            {%- for g in guilties %}
+            <tr>
+            <th scope="row">{{ loop.index }}</th>
+            <td>
+                <a href="/telemetryui/crashes/guilty_details/{{ g.guilty_id }}" data-toggle="tooltip" data-placement="left" title="{{ g.guilty }}">{{ g.guilty|truncate(30, True) }}</a>
+                <button id="more_button" type="button" data-toggle="modal" data-target="#myModal" data-whatever="{{ g.comment }}" data-gid="{{ g.guilty_id }}" style="width: 34px;">...</button>
+            </td>
+            <!-- SVG for {{ g.total }}/{{ maxtotal }} overall -->
+            <td>
+                <span data-toggle="tooltip" data-placement="left" title="{{ g.total }}">
+                {%- set width = g.total / maxtotal * 100 %}
+                <svg width="4.5em" height="1.5em" viewBox="0 0 3 1">
+                    <rect x="0" y="0" width="{{ width }}%" height="100%" />
+                </svg>
+                </span>
+            </td>
+            {%- for c in g.builds %}
+            {%- for b in builds %}
+            {%- if b[0] == c[0] and c[1] != "0" %}
+            <!-- SVG for {{ c[1] }}/{{ b[1] }} in build {{ b[0] }} -->
+            <td>
+                <span data-toggle="tooltip" data-placement="left" title="{{ c[1] }}">
+                {%- set width = c[1] / b[1] * 100 %}
+                <svg width="4.5em" height="1.5em" viewBox="0 0 3 1">
+                    <rect x="0" y="0" width="{{ width }}%" height="100%" />
+                </svg>
+                </span>
+            </td>
+            {%- elif b[0] == c[0] %}
+            <td><!-- no data --></td>
+            {%- endif %}
+            {%- endfor %}
+            {%- endfor %}
+            <td>
+                <div class="comment_container">
+                    <div class="comment" style="display:inline;">{% if g.comment %}<span title="{{ g.comment }}">{{ g.comment|truncate(30, True) }}</span>{% endif %}</div>
+                </div>
+            </td>
+            </tr>
+            {%- endfor %}
+        </tbody>
+    </table>
+    {%- else %} {# guilties #}
+    <div class="alert alert-info" role="alert">No guilties data to display.</div>
+    {%- endif %} {# guilties #}
+
+    <div class="col-md-6" style="min-height: 500px;">
+        <canvas id="pie-classification" width="450" height="450"></canvas>
+    </div>
+    <div class="col-md-6" style="min-height: 500px;">
+        <canvas id="bar-reports" width="450" height="450"></canvas>
+    </div>
+
+</div> <!-- .row -->
+
+    <!-- Modal -->
+    <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="myModalLabel">Guilty comment</h4>
+                </div>
+                <div class="modal-body">
+                    <form role="form" action="" method="post" name="edit-comment">
+                        {{ form.hidden_tag() }}
+                        <div class="form-group col-md-6" id="text-field">
+                            {{ form.comment.label(class="control-label", for="comment_field") }}
+                            {{ form.comment(id="comment_field", class="form-control") }}
+                        </div>
+                        <div class="form-group col-md-6" id="hideguilty-field">
+                            {{ form.hidden.label(class="control-label", for="hideguilty_field") }}
+                            {{ form.hidden(id="hideguilty_field", class="form-control") }}
+                        </div>
+                        <div class="form-group" id="submit-field">
+                            {{ form.guilty_id(id="guilty_id", class="form-control") }}
+                            <button type="submit" class="btn btn-primary">Submit</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    $('#myModal').on('show.bs.modal', function(event) {
+        var button = $(event.relatedTarget);
+        var comment = button.data('whatever');
+        var gid = button.data('gid');
+        var modal = $(this);
+        $(this).find('.modal-content').css({
+            'margin-top': function () {
+                return (modal.outerHeight()/4 - $(this).height() -  parseInt($(this).css('padding-top')))
+            }
+        });
+        modal.find('#comment_field').val(comment);
+        modal.find('#guilty_id').val(gid);
+    });
+
+    $(function() {
+        $('[data-toggle="tooltip"]').tooltip()
+    });
+</script>
+
+<script src="/telemetryui/static/js/crashes.js"></script>
+<script>
+    (function(){
+        var labels = [{% for s in charts[0].record_stats %} "{{ s[0] }}", {% endfor %}];
+        var values = [{% for s in charts[0].record_stats %} "{{ s[1] }}", {% endfor %}];
+        var labels1 = [{% for s in charts[1].record_stats %} "{{ s[0] }}", {% endfor %}];
+        var values1 = [{% for s in charts[1].record_stats %} "{{ s[1] }}", {% endfor %}];
+
+        var ctx = document.getElementById("pie-classification").getContext("2d");
+        telemetryUI.renderCrashStats(ctx, labels, values);
+
+        var ctx1 = document.getElementById("bar-reports").getContext("2d");
+        telemetryUI.renderCrashReports(ctx1, labels1, values1);
+    })();
+</script>
+
+
+{% endblock %}
+
+
+{#-
+# vi: ft=jinja ts=8 et sw=4 sts=4
+#}

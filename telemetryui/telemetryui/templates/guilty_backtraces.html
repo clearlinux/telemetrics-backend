@@ -1,0 +1,62 @@
+{#-
+ # Copyright 2015-2017 Intel Corporation
+ #
+ # Licensed under the Apache License, Version 2.0 (the "License");
+ # you may not use this file except in compliance with the License.
+ # You may obtain a copy of the License at
+ #
+ #     http://www.apache.org/licenses/LICENSE-2.0
+ #
+ # Unless required by applicable law or agreed to in writing, software
+ # distributed under the License is distributed on an "AS IS" BASIS,
+ # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+-#}
+{% extends "base.html" %}
+
+{%- block page_title %}
+<title>Backtraces - CLR Telemetry</title>
+{%- endblock %}
+
+{% block content %}
+<h3>Records with guilty <em>{{ func }} - [{{ mod }}]</em></h3>
+
+<table class="table table-bordered col-md-12">
+    <thead>
+        <th>#</th>
+        <th>Program</th>
+        <th>Signal</th>
+        <th>Details</th>
+    </thead>
+    <tbody>
+        {%- for b in backtraces %}
+        <tr>
+        <th scope="row">{{ loop.index }}</th>
+        <td>{{ b.program }}</td>
+        <td>{{ b.signal }}</td>
+        <td>
+            <a href="{{ url_for('record_details', record_id=b.record_id) }}" class="btn btn-primary" role="button">Record details</a>
+            <a href="{{ url_for('guilty_edit', record_id=b.record_id, guilty_id=guiltyid) }}" class="btn btn-default" role="button">Update blacklist</a>
+<pre>
+        {%- for f in b.backtrace %}
+#{{ loop.index0 }} {{ f[0] }} - [{{ f[1] }}]{% if f[2] %} - {{ f[2]|basename }}{% endif %}
+        {%- endfor %}
+</pre>
+        </td>
+        </tr>
+        {%- endfor %}
+    </tbody>
+</div>
+
+<script>
+$("pre").html(function(_, html) {
+    return html.replace(/({{ funcmod }})/, '<span class="bg-danger">$1<span class="glyphicon glyphicon-arrow-left"></span></span>');
+});
+</script>
+{% endblock %}
+
+
+{#-
+# vi: ft=jinja ts=8 et sw=4 sts=4
+#}

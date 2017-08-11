@@ -1,0 +1,91 @@
+{#-
+ # Copyright 2015-2017 Intel Corporation
+ #
+ # Licensed under the Apache License, Version 2.0 (the "License");
+ # you may not use this file except in compliance with the License.
+ # You may obtain a copy of the License at
+ #
+ #     http://www.apache.org/licenses/LICENSE-2.0
+ #
+ # Unless required by applicable law or agreed to in writing, software
+ # distributed under the License is distributed on an "AS IS" BASIS,
+ # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+-#}
+{% macro paginate(paginator) %}
+    {# pluggable pagination macro #}
+
+    {% set view_args = request.view_args %}
+
+    <div class="text-center">
+        <ul class="pagination pagination-lg">
+
+            {% if paginator.has_prev %}
+                <li class="active">
+                    <a href="{{ url_for(request.endpoint, page=paginator.prev_num) }}">&laquo;</a>
+                </li>
+            {% else %}
+                  <li class="disabled"><a href="#">«</a></li>
+            {% endif %}
+
+            {% if paginator.has_next %}
+                <li><a href="{{ url_for(request.endpoint, page=paginator.next_num) }}">&raquo;</a></li>
+            {% else %}
+                <li class="disabled"><a href="#">&raquo;</a></li>
+            {% endif %}
+        </ul>
+    </div>
+
+{% endmacro %}
+
+{% macro render_pagination(pagination) %}
+<div id="records_page_div">
+    <div id="records_pager" class="text-center">
+        <ul class="pager">
+        {%- if pagination.has_prev %}
+            <li class="active"><a href="{{ url_for_other_page(pagination.page - 1) }}">Prev</a></li>
+        {%- else %}
+            <li class="disabled"><a href="#">Prev</a></li>
+        {%- endif %}
+        {%- if pagination.has_next %}
+            <li class="active"><a href="{{ url_for_other_page(pagination.page + 1) }}">Next</a></li>
+        {%- else %}
+            <li class="disabled"><a href="#">Next</a></li>
+        {%- endif %}
+        </ul>
+    </div>
+    <div id="records_page_bar" class="text-center">
+        <ul class="pagination pagination-centered" id="records_pagination">
+            {%- for page in pagination.iter_pages() %}
+                {%- if page %}
+                    {%- if page != pagination.page %}
+                        <li><a href="{{ url_for_other_page(page=page) }}">{{ page }}</a></li>
+                    {%- else %}
+                    <li class="active"><a href="#">{{ page }}</a></li>
+                {%- endif %}
+                {%- else %}
+                    <li class="disabled"><a href="#">...</a></li>
+                {%- endif %}
+            {%- endfor %}
+        </ul>
+    </div>
+    <div class="btn-group" id="page_size_menu">
+        <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">Page size
+        <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu" role="menu">
+            <li><a href="{{ url_for_other_page(page=1, page_size=10) }}">10</a></li>
+            <li><a href="{{ url_for_other_page(page=1, page_size=25) }}">25</a></li>
+            <li><a href="{{ url_for_other_page(page=1, page_size=50) }}">50</a></li>
+            <li><a href="{{ url_for_other_page(page=1, page_size=100) }}">100</a></li>
+            <li><a href="{{ url_for_other_page(page=1, page_size=1000) }}">1000</a></li>
+        </ul>
+    </div>
+</div>
+{% endmacro %}
+
+
+{#-
+# vi: ft=jinja ts=8 et sw=4 sts=4
+#}

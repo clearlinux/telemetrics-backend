@@ -1,0 +1,110 @@
+{#-
+ # Copyright 2015-2017 Intel Corporation
+ #
+ # Licensed under the Apache License, Version 2.0 (the "License");
+ # you may not use this file except in compliance with the License.
+ # You may obtain a copy of the License at
+ #
+ #     http://www.apache.org/licenses/LICENSE-2.0
+ #
+ # Unless required by applicable law or agreed to in writing, software
+ # distributed under the License is distributed on an "AS IS" BASIS,
+ # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+-#}
+{% import 'helpers.html' as helpers %}
+{% block record_content %}
+    {{ helpers.render_pagination(records) }}
+
+    <h3>Records found: {{ records.total }}</h3>
+    <table class="table table-hover table-condensed text-nowrap">
+        <thead>
+            <th>Id</th>
+            <th>Source</th>
+            <th>Machine ID</th>
+            <th>When</th>
+            <th>Severity</th>
+            <th class="ellipsize">Classification</th>
+            <th>OS</th>
+            <th>Ver</th>
+            <th>Payload</th>
+        </thead>
+        <tbody>
+        {% for rec in records.items %}
+            <tr>
+                <td><a href="/telemetryui/records/record_details/{{ rec.id }}">{{ rec.id }}</a></td>
+                {%- if rec.external %}
+                <td class="bg-success">external</td>
+                {%- else %}
+                <td>internal</td>
+                {%- endif %}
+                <td><span data-toggle="tooltip" data-placement="top" title="{{ rec.machine_id }}"><div class="machine_id">{{ rec.machine_id }}</div></span></td>
+                <td>{{ rec.tsp_server | timesince }}</td>
+                {%- if rec.severity == 1 %}
+                {%- set label = "default" %}
+                {%- set text = "low" %}
+                {%- elif rec.severity == 2 %}
+                {%- set label = "info" %}
+                {%- set text = "med" %}
+                {%- elif rec.severity == 3 %}
+                {%- set label = "warning" %}
+                {%- set text = "high" %}
+                {%- elif rec.severity == 4 %}
+                {%- set label = "danger" %}
+                {%- set text = "crit" %}
+                {%- endif %}
+                <td><span class="label label-{{ label }}">{{ text }}</span></td>
+                <td class="ellipsize">{{ rec.classification.classification|replace("org.clearlinux/", "") }}</td>
+                <td>{{ rec.os_name }}</td>
+                <td>{{ rec.build.build }}</td>
+                <td><div class="payload_container"><div class="payload">{{ rec.backtrace }}</div>
+                        <button id="more_button" type="button" data-toggle="modal" data-target="#myModal" data-whatever="{{ rec.backtrace }}">...</button>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {{ helpers.render_pagination(records) }}
+
+    <!-- Modal -->
+    <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="myModalLabel">Record Payload</h4>
+                </div>
+                <div class="modal-body">
+                ...
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    $('#myModal').on('show.bs.modal', function(event) {
+        var button = $(event.relatedTarget);
+        var payload = button.data('whatever');
+        payload = $("<div>").text(payload).html();
+        payload = payload.replace(/\n/g, "<br />");
+        console.log(payload);
+        var modal = $(this);
+        $(this).find('.modal-content').css({
+                'margin-top': function () {
+                            return (modal.outerHeight()/4 - $(this).height() -  parseInt($(this).css('padding-top')))
+                                    }
+                                                                    });
+        modal.find('.modal-body').html(payload);
+    });
+</script>
+{% endblock %}
+
+
+{#-
+# vi: ft=jinja ts=8 et sw=4 sts=4
+#}
