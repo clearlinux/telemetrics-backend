@@ -18,7 +18,6 @@
 REMOTE_APP_DIR="/var/www/telemetry"
 DEBIAN_PKGS="build-essential python3 python3-dev python3-pip python3-virtualenv libpq-dev nginx git"
 CLR_BUNDLES="application-server database-basic database-basic-dev python-basic os-clr-on-clr os-core-dev web-server-basic"
-PIP_PKGS="flask Flask-SQLAlchemy Flask-WTF Flask-Migrate psycopg2 uwsgi"
 DB_PASSWORD=""
 NGINX_USER=""
 NGINX_GROUP=""
@@ -202,17 +201,42 @@ _install_clr_reqs() {
   sudo https_proxy=$https_proxy pip3 install uwsgitop
 }
 
+_write_requirements() {
+    cat > $1 << EOF
+alembic==0.9.5
+click==6.7
+Flask==0.12.2
+Flask-Migrate==2.1.0
+Flask-SQLAlchemy==2.2
+Flask-WTF==0.14.2
+itsdangerous==0.24
+Jinja2==2.9.6
+Mako==1.0.7
+MarkupSafe==1.0
+psycopg2==2.7.3
+python-dateutil==2.6.1
+python-editor==1.0.3
+six==1.10.0
+SQLAlchemy==1.1.13
+uWSGI==2.0.15
+Werkzeug==0.12.2
+WTForms==2.1
+EOF
+}
+
 _install_pip_pkgs_ubuntu() {
   local log=$REMOTE_APP_DIR/install.log
+  local reqs=$1
   sudo rm -f "$log"
-  sudo bash -c "https_proxy=$https_proxy source venv/bin/activate && https_proxy=$https_proxy pip3 --log $log install $PIP_PKGS"
+  sudo bash -c "https_proxy=$https_proxy source venv/bin/activate && https_proxy=$https_proxy pip3 --log $log install -r $reqs"
 }
 
 _install_pip_pkgs_clr() {
   local log=$REMOTE_APP_DIR/install.log
+  local reqs=$1
   sudo rm -f "$log"
   # the latest psycopg2 binary package is incompatible with the glibc 2.26 on Clear Linux
-  sudo bash -c "https_proxy=$https_proxy source venv/bin/activate && https_proxy=$https_proxy pip3 --log $log install --no-binary psycopg2 $PIP_PKGS"
+  sudo bash -c "https_proxy=$https_proxy source venv/bin/activate && https_proxy=$https_proxy pip3 --log $log install --no-binary psycopg2 -r $reqs"
 }
 
 _install_virtual_env() {
@@ -222,7 +246,12 @@ _install_virtual_env() {
   (
     cd $REMOTE_APP_DIR
     sudo bash -c "https_proxy=$https_proxy virtualenv -p /usr/bin/python3 venv"
-    _install_pip_pkgs_${DISTRO}
+    local REQS=requirements.txt
+    if [ ! -f ${REQS} ]; then
+       local REQS=$(mktemp /tmp/requirements.txt.XXXXXX)
+       _write_requirements $REQS
+    fi
+    _install_pip_pkgs_${DISTRO} $REQS
     sudo chown -R $NGINX_USER:$NGINX_GROUP $REMOTE_APP_DIR
   )
   sudo mkdir -pv /var/log/uwsgi
