@@ -40,7 +40,7 @@
                 text: title
             },
             legend: {
-                position: 'right'
+                display: false
             }
         };
 
