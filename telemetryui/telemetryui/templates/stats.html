@@ -24,11 +24,27 @@
 <div><h2>Statistics</h2></div>
 
 <div class="row">
-    <div class="col-md-6" style="min-height: 500px;">
+    <div class="col-md-8" style="min-height: 500px;">
         <canvas id="pie-classification" width="800" height="450"></canvas>
     </div>
-    <div class="col-md-6" style="min-height: 500px;">
+    <div class="col-md-4" style="min-height: 500px;">
+        <h5>Legend</h5>
+        <ul class="list-unstyled legend-1">
+            {% for s in charts[0].record_stats %}
+            <li data-toggle="tooltip" title="{{ s[0] }}"><div class="series-legend"></div>{{ s[0] }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="col-md-8" style="min-height: 500px;">
         <canvas id="pie-platform" width="800" height="450"></canvas>
+    </div>
+    <div class="col-md-4" style="min-height: 500px;">
+        <h5>Legend</h5>
+        <ul class="list-unstyled legend-2">
+            {% for s in charts[1].record_stats %}
+            <li data-toggle="tooltip" title="{{ s[0] }}"><div class="series-legend"></div>{{ s[0] }}</li>
+            {% endfor %}
+        </ul>
     </div>
 </div>
 
@@ -46,7 +62,20 @@
         telemetryUI.renderStatsClass(ctxClass, "Records per Classification", labels, values);
         telemetryUI.renderStatsPlatform(ctxPlatform, "Records per Platform", labels1, values1);
 
+        jQuery(".legend-1 div.series-legend")
+        .each(function(index, element){
+            var aColor = telemetryUI.backgroundColors[index] || "#E0E0E0";
+            jQuery(element).css("backgroundColor", aColor);
+        });
+
+        jQuery(".legend-2 div.series-legend")
+        .each(function(index, element){
+            var aColor = telemetryUI.backgroundColors[index] || "#E0E0E0";
+            jQuery(element).css("backgroundColor", aColor);
+        });
+
     })();
+
 </script>
 
 
