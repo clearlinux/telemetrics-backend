@@ -31,16 +31,23 @@
   <body>
     <div class="container">
   <ul class="nav nav-tabs" role="tablist">
-      <li class="{{ page_records }}"><a href="/telemetryui/records">Records</a></li>
-      <li class="{{ page_builds }}"><a href="/telemetryui/builds">Builds</a></li>
-      <li class="{{ page_stats }}"><a href="/telemetryui/stats">Stats</a></li>
-      <li class="{{ page_crashes }}"><a href="/telemetryui/crashes">Crashes</a></li>
-      <li class="{{ page_mce }}"><a href="/telemetryui/mce">MCE</a></li>
-      <li class="{{ page_thermal }}"><a href="/telemetryui/thermal">Thermal</a></li>
-      <li class="{{ page_updates_matrix }}"><a href="/telemetryui/update_matrix">Updates</a></li>
-      <li class="{{ population }}"><a href="/telemetryui/population">Population</a></li>
+      <li class="nav-item active"><a class="nav-link" href="/telemetryui/records">Records</a></li>
+      <li class="nav-item"><a class="nav-link" href="/telemetryui/builds">Builds</a></li>
+      <li class="nav-item"><a class="nav-link" href="/telemetryui/stats">Stats</a></li>
+      <li class="nav-item"><a class="nav-link" href="/telemetryui/crashes">Crashes</a></li>
+      <li class="nav-item"><a class="nav-link" href="/telemetryui/mce">MCE</a></li>
+      <li class="nav-item"><a class="nav-link" href="/telemetryui/thermal">Thermal</a></li>
+      <li class="nav-item"><a class="nav-link" href="/telemetryui/update_matrix">Updates</a></li>
+      <li class="nav-item"><a class="nav-link" href="/telemetryui/population">Population</a></li>
+      {% for plugin in config['PLUGINS'] %}
+        <li class="nav-item"><a class="nav-link" href="/telemetryui/plugins/{{plugin}}">{{plugin|plugin_metadata}}</a></li>
+      {% endfor %}
   </ul>
+
     {% block content %} {% endblock %}
+        <script>
+            telemetryUI.initTabs();
+        </script>
     </div>
   </body>
 </html>
