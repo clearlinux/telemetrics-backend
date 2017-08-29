@@ -1,3 +1,5 @@
+VERSION = 1.0.0
+
 tag-production:
 	@TODAY=`date "+%F-%H%M%S"`; \
 	git rev-parse production-$$TODAY &> /dev/null; \
