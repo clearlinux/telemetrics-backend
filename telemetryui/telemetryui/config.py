@@ -15,6 +15,8 @@
 #
 
 import logging
+
+
 class Config(object):
     DEBUG = False
     TESTING = False
@@ -27,6 +29,11 @@ class Config(object):
     RECORDS_PER_PAGE = 50
     MAX_RECORDS_PER_PAGE = 1000
     MAX_WEEK_KEEP_RECORDS = 5
+
+    # Uncomment next line to display demo plugin, the code for the view
+    # can be found under 'telemetryui/plugins/demo'
+    # PLUGINS = ['demo']
+
 
 class Testing(Config):
     TESTING = True

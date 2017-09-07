@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{%- block page_title %}
+<title>Crash Stats - CLR Telemetry</title>
+{%- endblock %}
+
+{% block content %}
+
+<h2>Last ten builds:</h2>
+
+<ul class="list-unstyled">
+    {% for build in builds %}
+    <li>{{build.0}}</li>
+    {% endfor %}
+</ul>
+
+{% endblock %}
