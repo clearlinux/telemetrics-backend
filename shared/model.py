@@ -510,6 +510,7 @@ class Record(db.Model):
         q = db.session.query(Build.build, db.func.count(db.distinct(internal_expr)), db.func.count(db.distinct(external_expr)))
         q = q.join(Record).join(Classification)
         q = q.filter(Classification.classification=="org.clearlinux/heartbeat/ping")
+        q = q.filter(Record.os_name == 'clear-linux-os')
         q = q.group_by(Build.build)
 
         if most_recent:

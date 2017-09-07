@@ -63,3 +63,21 @@ ul#records_pagination {
 .tooltip.left .tooltip-arrow {
     border-left-color: #337AB7;
 }
+
+
+/* Stats tab special cases */
+ul.legend-1 li,
+ul.legend-2 li {
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: default;
+  text-overflow: ellipsis;
+}
+
+div.series-legend {
+    display: inline-block;
+    height: 10px;
+    width: 30px;
+    margin-right: 5px;
+    background-color: #E0E0E0;
+}
