@@ -14,20 +14,35 @@
 # limitations under the License.
 #
 
-from flask import render_template, request, session
-from flask import url_for, redirect, flash, abort
-from . import app
-from . import config
-from .model import Record, Guilty, GuiltyBlacklist
+import re
+import time
 import json
+import datetime
+import importlib
+from flask import (
+    render_template,
+    request,
+    session,
+    Blueprint)
+from flask import (
+    url_for,
+    redirect,
+    flash,
+    abort)
+from . import (
+    app,
+    crash,
+    forms)
+from .model import (
+    Record,
+    Guilty,
+    GuiltyBlacklist)
 from .updates import compute_update_matrix
-from . import crash
-from . import forms
-import re, time, datetime
 from flask import Response
 
 RECORDS_PER_PAGE = app.config.get('RECORDS_PER_PAGE', 50)
 MAX_RECORDS_PER_PAGE = app.config.get('MAX_RECORDS_PER_PAGE', 1000)
+
 
 @app.route('/telemetryui/', methods=['GET', 'POST'])
 @app.route('/telemetryui/records', methods=['GET', 'POST'])
@@ -36,24 +51,24 @@ def records(page=1):
     form = forms.RecordFilterForm()
 
     class_strings = Record.get_classifications(with_regex=True)
-    form.classification.choices = [(cs, cs)  if not "*" in cs else (cs.replace("*", "%"), cs) for cs in class_strings]
+    form.classification.choices = [(cs, cs) if "*" not in cs else (cs.replace("*", "%"), cs) for cs in class_strings]
     form.classification.choices.insert(0, ("All", "All"))
 
     builds = Record.get_builds()
-    form.build.choices =  [(b.build,b.build) for b in builds]
+    form.build.choices = [(b.build, b.build) for b in builds]
     form.build.choices.insert(0, ("All", "All"))
 
-    form.severity.choices = [("All", "All"),("1","1 - low"), ("2","2 - med"),("3","3 - high"),("4","4 - crit")]
+    form.severity.choices = [("All", "All"), ("1", "1 - low"), ("2", "2 - med"), ("3", "3 - high"), ("4", "4 - crit")]
     cl = session.get('severity')
 
     os_map = Record.get_os_map()
-    form.os_name.choices =  [(n,n) for n in os_map.keys()]
+    form.os_name.choices = [(n, n) for n in os_map.keys()]
     form.os_name.choices.insert(0, ("All", "All"))
 
     form.machine_id.default = ""
 
     if request.method == 'POST':
-        if form.validate_on_submit() == False:
+        if form.validate_on_submit() is False:
             print("Was not able to validate fields")
             for error in form.build.errors:
                 print(error)
@@ -61,8 +76,8 @@ def records(page=1):
                 print(error)
             for error in form.severity.errors:
                 print(error)
-            records = Record.query.order_by(Record.id.desc()).paginate(page, RECORDS_PER_PAGE , False)
-            return render_template('records.html', records=records, page_records="active", form=form)
+            out_records = Record.query.order_by(Record.id.desc()).paginate(page, RECORDS_PER_PAGE, False)
+            return render_template('records.html', records=out_records, form=form)
         else:
             classification = request.form.get('classification')
             os_name = request.form.get('os_name')
@@ -139,8 +154,9 @@ def records(page=1):
             page_size = RECORDS_PER_PAGE
         elif int(page_size) > MAX_RECORDS_PER_PAGE:
             page_size = MAX_RECORDS_PER_PAGE
-        records = Record.filter_records(build, classification, severity, machine_id, os_name=os_name, payload=payload, not_payload=not_payload, from_date=from_date, to_date=to_date).paginate(page, int(page_size), False)
-        return render_template('records.html', records=records, page_records="active", form=form, os_map=json.dumps(os_map))
+        out_records = Record.filter_records(build, classification, severity, machine_id, os_name=os_name, payload=payload, not_payload=not_payload, from_date=from_date, to_date=to_date).paginate(page, int(page_size), False)
+        return render_template('records.html', records=out_records, form=form, os_map=json.dumps(os_map))
+
 
 @app.route('/telemetryui/records/record_details/<int:record_id>')
 def record_details(record_id):
@@ -149,30 +165,30 @@ def record_details(record_id):
         abort(404)
     return render_template('record_details.html', record=record)
 
+
 @app.route('/telemetryui/builds')
 def builds():
-    build_stats = [ {'build' : 200,'count': 2}, {'build':300, 'count':5}, {'build':340, 'count':7},
-                    {'build':360, 'count':15}, {'build':400, 'count':4},]
-    build_rec_pairs = Record.get_recordcnts_by_build();
-    return render_template('builds.html', build_stats=build_rec_pairs, page_builds="active")
+    build_rec_pairs = Record.get_recordcnts_by_build()
+    return render_template('builds.html', build_stats=build_rec_pairs)
+
 
 @app.route('/telemetryui/stats')
 def stats():
-    #Display records per classification and records per machine type for now
+    # Display records per classification and records per machine type for now
     class_rec_pairs = Record.get_recordcnts_by_classification()
     machine_rec_pairs = Record.get_recordcnts_by_machine_type()
 
-    charts = [ {'column': 'Classification', 'record_stats' : class_rec_pairs},
-               {'column':'Platform', 'record_stats': machine_rec_pairs}]
-    return render_template('stats.html', charts=charts, page_stats="active")
+    charts = [{'column': 'Classification', 'record_stats': class_rec_pairs},
+              {'column': 'Platform', 'record_stats': machine_rec_pairs}]
+    return render_template('stats.html', charts=charts)
 
 
 @app.route('/telemetryui/crashes', methods=['GET', 'POST'])
-def crashes(filter = None):
+def crashes(filter=None):
     form = forms.GuiltyDetailsForm()
 
     if request.method == 'POST':
-        if form.validate_on_submit() == False:
+        if form.validate_on_submit() is False:
             for e in form.comment.errors:
                 flash('Error in comment field: {}'.format(e), 'danger')
             for e in form.guilty_id.errors:
@@ -180,7 +196,7 @@ def crashes(filter = None):
             for e in form.hidden.errors:
                 flash('Error in hidden field: {}'.format(e), 'danger')
             if filter:
-                endpoint = url_for('crashes_filter', filter = filter)
+                endpoint = url_for('crashes_filter', filter=filter)
             else:
                 endpoint = url_for('crashes')
             return redirect(endpoint)
@@ -200,25 +216,25 @@ def crashes(filter = None):
 
             Guilty.update_comment(id, comment)
             if filter:
-                endpoint = url_for('crashes_filter', filter = filter)
+                endpoint = url_for('crashes_filter', filter=filter)
             else:
                 endpoint = url_for('crashes')
             return redirect(endpoint)
 
     all_classes = crash.get_all_classes()
     backtrace_classes = crash.get_backtrace_classes()
-    class_pairs = Record.get_crashcnts_by_class(classes=all_classes);
-    build_pairs = Record.get_crashcnts_by_build(classes=backtrace_classes);
-    charts = [ {'column': 'classification', 'record_stats': class_pairs, 'type': 'pie', 'width': 6 },
-               {'column': 'build', 'record_stats': build_pairs, 'type': 'column', 'width': 6 } ]
+    class_pairs = Record.get_crashcnts_by_class(classes=all_classes)
+    build_pairs = Record.get_crashcnts_by_build(classes=backtrace_classes)
+    charts = [{'column': 'classification', 'record_stats': class_pairs, 'type': 'pie', 'width': 6},
+              {'column': 'build', 'record_stats': build_pairs, 'type': 'column', 'width': 6}]
     tmp = Record.get_top_crash_guilties(classes=backtrace_classes)
 
     if filter:
         guilties = crash.guilty_list_for_build(tmp, filter)
         return render_template('crashes_filter.html', guilties=guilties, build=filter, form=form)
     else:
-        builds, guilties = crash.guilty_list_per_build(tmp)
-        return render_template('crashes.html', charts=charts, guilties=guilties, builds=builds, form=form, page_crashes="active")
+        out_builds, guilties = crash.guilty_list_per_build(tmp)
+        return render_template('crashes.html', charts=charts, guilties=guilties, builds=out_builds, form=form)
 
 
 @app.route('/telemetryui/crashes/<string:filter>', methods=['GET', 'POST'])
@@ -236,6 +252,7 @@ def guilty_details(id):
     query = Record.get_machine_ids_for_guilty(id)
     return render_template('guilty_details.html', guilty_id=id, query=query, func=function, mod=module, hide=hidden)
 
+
 @app.route('/telemetryui/crashes/guilty_details/<int:id>/backtraces')
 def guilty_backtraces(id):
     machine_id = request.args.get('machine_id')
@@ -252,6 +269,7 @@ def guilty_backtraces(id):
     backtraces = crash.explode_backtraces(classes=backtrace_classes, guilty_id=id, machine_id=machine_id, build=build)
     # Display at most 50 entries for now, until we have backtrace grouping and pagination
     return render_template('guilty_backtraces.html', backtraces=backtraces[:50], func=func, mod=mod, funcmod=funcmod, guiltyid=id)
+
 
 @app.route('/telemetryui/crashes/guilty_edit/', methods=['GET', 'POST'])
 def guilty_edit():
@@ -306,7 +324,7 @@ def guilty_edit():
                         to_remove.append(choice)
 
                 GuiltyBlacklist.update(to_add, to_remove)
-                backtrace_classes=crash.get_backtrace_classes()
+                backtrace_classes = crash.get_backtrace_classes()
 
                 if 'apply' in request.form:
                     Record.reset_processed_records(classes=backtrace_classes, id=rec_id)
@@ -407,7 +425,7 @@ def guilty_reset():
         if form_reset.validate_on_submit():
             res = request.form['confirm']
             if res == 'yes':
-                backtrace_classes=crash.get_backtrace_classes()
+                backtrace_classes = crash.get_backtrace_classes()
                 Record.reset_processed_records(classes=backtrace_classes)
                 # must pass args as bytes to uwsgi under Python 3
                 crash.process_guilties(klass='org.clearlinux/crash/clr'.encode())
@@ -422,6 +440,7 @@ def guilty_reset():
             return redirect(url_for('guilty_reset'))
 
     return render_template('guilty_reset.html', form=form_reset)
+
 
 @app.route('/telemetryui/mce', methods=['GET', 'POST'])
 def mce():
@@ -470,7 +489,7 @@ def mce():
     build_pairs = [(build, by_builds[build]) for build in builds]
     current_year = time.strftime("%Y", time.gmtime(time.time()))
     current_week = time.strftime("%U", time.gmtime(time.time()))
-    current_last_week = time.strftime("%U", time.strptime(current_year+"1231", "%Y%m%d"))
+    current_last_week = time.strftime("%U", time.strptime(current_year + "1231", "%Y%m%d"))
     week_rec_map = {}
     class_pairs = []
     has_thermal_event = False
@@ -478,15 +497,15 @@ def mce():
         current_class_records = by_classification[clas]
         class_pairs.append((clas, len(current_class_records)))
         for i in range(int(current_week)):
-            week = str(i+1)
-            week_start = time.mktime(time.strptime(current_year+week+"0", "%Y%U%w"))
-            next_week = str(i+2)
+            week = str(i + 1)
+            week_start = time.mktime(time.strptime(current_year + week + "0", "%Y%U%w"))
+            next_week = str(i + 2)
             year = current_year
             if int(week) == int(current_last_week):
                 next_week = '01'
-                year = str(int(current_year)+1)
-            week_start = time.mktime(time.strptime(current_year+week+"0", "%Y%U%w"))
-            week_end = time.mktime(time.strptime(year+next_week+"0", "%Y%U%w"))
+                year = str(int(current_year) + 1)
+            week_start = time.mktime(time.strptime(current_year + week + "0", "%Y%U%w"))
+            week_end = time.mktime(time.strptime(year + next_week + "0", "%Y%U%w"))
             week_class_rec = [x for x in current_class_records if x.tsp >= week_start and x.tsp <= week_end]
             if len(week_class_rec):
                 if week in week_rec_map:
@@ -494,7 +513,7 @@ def mce():
                 else:
                     week_rec_map[week] = {clas: len(week_class_rec)}
     weeks = sorted(week_rec_map.keys(), key=lambda x: int(x), reverse=True)
-    fullmce = [["MCE type"] + ["Week: "+x for x in weeks]]
+    fullmce = [["MCE type"] + ["Week: " + x for x in weeks]]
     for clas in sorted(by_classification.keys()):
         current_class_records = [clas]
         for week in weeks:
@@ -505,60 +524,62 @@ def mce():
         if len(current_class_records) > 1:
             fullmce.append(current_class_records)
     fullmce = json.dumps(fullmce)
-    charts = [ {'column': 'classification', 'record_stats': class_pairs, 'type': 'pie', 'width': 6 },
-               {'column': 'build', 'record_stats': build_pairs, 'type': 'column', 'width': 6 } ]
-    return render_template('mce.html', charts=charts, top10=top10, builds=builds, maxcnt=maxcnt, page_mce="active", fullmce=fullmce)
+    charts = [{'column': 'classification', 'record_stats': class_pairs, 'type': 'pie', 'width': 6},
+              {'column': 'build', 'record_stats': build_pairs, 'type': 'column', 'width': 6}]
+    return render_template('mce.html', charts=charts, top10=top10, builds=builds, maxcnt=maxcnt, fullmce=fullmce)
+
 
 @app.route('/telemetryui/thermal', methods=['GET', 'POST'])
 def thermal():
     current_year = time.strftime("%Y", time.gmtime(time.time()))
     current_week = time.strftime("%U", time.gmtime(time.time()))
-    current_last_week = time.strftime("%U", time.strptime(current_year+"1231", "%Y%m%d"))
-    from_date = time.strftime("%Y-%m-%d", time.localtime(time.mktime(time.strptime(current_year+current_week+"0", "%Y%U%w"))-(604800*4)))
+    current_last_week = time.strftime("%U", time.strptime(current_year + "1231", "%Y%m%d"))
+    from_date = time.strftime("%Y-%m-%d", time.localtime(time.mktime(time.strptime(current_year + current_week + "0", "%Y%U%w")) - 2419200))  # 2419200 = (604800 * 4)
     records = Record.filter_records(None, ["org.clearlinux/mce/thermal"], None, from_date=from_date).all()
     week_rec_map = {}
-    year_start = time.mktime(time.strptime(current_year+"000", "%Y%U%w"))
+    year_start = time.mktime(time.strptime(current_year + "000", "%Y%U%w"))
     for r in records:
         if r.tsp >= year_start:
-            week = str(int((r.tsp - year_start)/604800) + ((r.tsp - year_start) % 604800 > 0))
+            week = str(int((r.tsp - year_start) / 604800) + ((r.tsp - year_start) % 604800 > 0))
             if week in week_rec_map:
                 week_rec_map[week] += 1
             else:
                 week_rec_map[week] = 1
     weeks = sorted(week_rec_map.keys(), key=lambda x: int(x), reverse=True)
-    thermal_chart = [["Thermal records"] + ["Week: "+x for x in weeks]]
+    thermal_chart = [["Thermal records"] + ["Week: " + x for x in weeks]]
     weekly_records = ["org.clearlinux/mce/thermal"]
     for week in weeks:
         weekly_records.append(week_rec_map[week])
     thermal_chart.append(weekly_records)
     thermal_chart = json.dumps(thermal_chart)
-    return render_template('thermal.html', thermal_chart=thermal_chart, page_thermal="active")
+    return render_template('thermal.html', thermal_chart=thermal_chart)
+
 
 @app.route('/telemetryui/updates')
 def updates():
     updates = Record.get_updates()
     return json.dumps(updates)
 
+
 @app.route('/telemetryui/update_matrix')
 def swupd_matrix():
     update_msgs_query = Record.get_update_msgs()
     updates = compute_update_matrix(update_msgs_query.all())
-    return render_template('update_matrix.html', updates=updates, page_updates_matrix="active")
+    return render_template('update_matrix.html', updates=updates)
+
 
 @app.route('/telemetryui/population')
 def population():
-    charts = [
-               { 'id': 'Overall', 'time': None, 'timestr': 'Overall' },
-               { 'id': 'TwoWeeks', 'time': 14, 'timestr': 'Past Two Weeks' },
-               { 'id': 'OneWeek', 'time': 7, 'timestr': 'Past Week' },
-               { 'id': 'OneDay', 'time': 1, 'timestr': 'Past Day' }
-             ]
+    charts = [{'id': 'Overall', 'time': None, 'timestr': 'Overall'},
+              {'id': 'TwoWeeks', 'time': 14, 'timestr': 'Past Two Weeks'},
+              {'id': 'OneWeek', 'time': 7, 'timestr': 'Past Week'},
+              {'id': 'OneDay', 'time': 1, 'timestr': 'Past Day'}]
 
     for c in charts:
         msgs = Record.get_heartbeat_msgs(c['time'])
         c['stats'] = (len(msgs) > 0) and msgs or None
 
-    return render_template('population.html', charts=charts, population="active")
+    return render_template('population.html', charts=charts)
 
 
 @app.route('/telemetryui/records/export/records-<int:timestamp>.csv')
@@ -571,7 +592,7 @@ def export_csv(timestamp):
     not_payload = request.args.get('not_payload')
     from_date = request.args.get('from_date')
     to_date = request.args.get('to_date')
-    format_type= request.args.get('format_type')
+    format_type = request.args.get('format_type')
 
     if format_type == 'inline':
         # TODO:
@@ -593,5 +614,39 @@ def export_csv(timestamp):
         response.headers['Content-Disposition'] = 'attachment; filename=export-{}.csv'.format(timestamp)
         return response
 
+
+def is_plugin_valid(plugin):
+    tab_name = getattr(plugin, "TAB_NAME", None)
+    init = getattr(plugin, "init", None)
+
+    if None in [tab_name, init]:
+        return False
+
+    if callable(init) is not True:
+        return False
+
+    return True
+
+
+def load_plugin(plugin_name):
+    print("loading {}".format(plugin_name))
+    plugin_module = importlib.import_module("telemetryui.plugins.{}.views".format(plugin_name))
+
+    def register_bp(a_blueprint):
+        app.register_blueprint(a_blueprint, url_prefix='/telemetryui/plugins')
+
+    if is_plugin_valid(plugin_module) is True:
+        plugin_module.init(register_bp)
+    else:
+        print("Plugin {} could not be loaded".format(plugin_name))
+
+
+def load_plugins():
+    plugins = app.config.get('PLUGINS', [])
+    for plugin in plugins:
+        load_plugin(plugin)
+
+
+load_plugins()
 
 # vi: ts=4 et sw=4 sts=4

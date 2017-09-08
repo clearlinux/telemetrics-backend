@@ -19,6 +19,7 @@
 
 import logging
 
+
 class Config(object):
     DEBUG = True
     TESTING = False
@@ -34,6 +35,10 @@ class Config(object):
     # Generate a random key by running `head -c 32 /dev/urandom | base64 -`.
     # The value below is an example key generated with that command.
     SECRET_KEY = '6WbDLE0W4wON/CR7rm6P7SuI85yLCvOK02U7UeHoySQ='
+
+    # Uncomment next line to display demo plugin, the code for the view
+    # can be found under 'telemetryui/plugins/demo'
+    # PLUGINS = ['demo']
 
 
 class Testing(Config):

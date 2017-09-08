@@ -15,7 +15,11 @@
 #
 
 import os
-from time import time, strftime, localtime
+from time import (
+    time,
+    strftime,
+    localtime)
+
 
 def timesince(dt, default="just now"):
     now = time()
@@ -45,12 +49,16 @@ def timesince(dt, default="just now"):
 
     return default
 
+
 def local_datetime_since(sec):
-    return  strftime("%a, %d %b %Y %H:%M:%S", localtime(sec))
+    return strftime("%a, %d %b %Y %H:%M:%S", localtime(sec))
 
 
 def basename(path):
     return os.path.basename(path)
 
+
+def plugin_metadata(name):
+    return name.title()
 
 # vi: ts=4 et sw=4 sts=4
