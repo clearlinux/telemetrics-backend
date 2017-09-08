@@ -32,11 +32,19 @@
     }
 
 
+    function initTabs(){
+        if (window.location.pathname !== "/telemetryui/") {
+            jQuery("ul.nav.nav-tabs li").removeClass("active");
+            jQuery('ul.nav.nav-tabs li a[href*="' + window.location.pathname + '"]').parent().addClass("active");
+        }
+    }
+
     return {
         backgroundColors: ["#3e95cd", "#8e5ea2","#3cba9f","#e8c3b9","#c45850",
                            "#ff8c00", "#483d8b", "#00bfff", "#1e90ff", "#008000",
                            "#df42f4", "#c7f441", "#f47641", "#f44141", "#43f441"],
-        newChart: newChart
+        newChart: newChart,
+        initTabs: initTabs
     };
 
 });
