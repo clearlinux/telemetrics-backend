@@ -209,6 +209,14 @@ The current views are:
   days. Thus, the analysis presented in this view is *fuzzy* due to the machine
   ID rotation.
 
+## Custom `telemetryui` views
+
+To provided users with an extensible framework a concept of "plugin views" was
+implemented to add views without the need to make changes to the core of the
+application. To read more about (plugin view)[/telemetryui/telemetryui/plugins/README.md]
+go to relevant documentation.
+
+
 ## Special configuration
 
 ### Configuring the `collector` TID

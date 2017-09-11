@@ -11,11 +11,10 @@ Plugins provide a reasonable encapsulation/separation of the plugin logic
 and still allows the plugins to access core component i.e. base.html template.
 
 
-### How should plugins be encapsulated?
+### Plugin encapsulated
 
-## Name
-Plugin code should be in a folder with a descriptive name and it should be
-[PEP8 module name](https://www.python.org/dev/peps/pep-0008/#package-and-module-names) acceptable name.
+Plugin code should be in a folder with a descriptive name and it should be an acceptable
+[PEP8 module name](https://www.python.org/dev/peps/pep-0008/#package-and-module-names).
 Telemetryui view plugins are essentially [flask blueprints](http://flask.pocoo.org/docs/0.12/blueprints/)
 therefore a plugin can define its own resource folders (templates and static) that live
 in the same folder as the rest of the plugin code (i.e.)
@@ -36,7 +35,27 @@ Note that plugins are able to access templates declared at the app level. The fl
 system will try to find a template initially in the list of templates registered by the main app. 
 
 
-## Attributes required in a plugin view
+### Where to "install" plugins 
+
+"Encapsulated" plugins go under the plugins folder under telemeryui sub folder.
+
+```bash
+
+<telemetryui-root>/telemetryui/telemetryui/
+                                          static/
+                                          templates/
+                                          plugins/
+                                          model.py
+                                          config.py
+                                          updates.py
+                                          ....
+```
+
+Notice in the core folder structure there is a static and templates folder. Plugins (blueprints)
+can have their own templates and static folder.    
+
+
+### Attributes required in a plugin view
 
 Plugins are expected to have a views.py file with all the views that the plugin
 provides (i.e.)
@@ -46,7 +65,6 @@ plugin_root/
             __init__.py
             views.py
             templates
-
 ```
 
 Plugins are imported as python modules, therefore  ```__init__.py``` is required.
@@ -80,12 +98,15 @@ def init(fn):
 
 The init function is used to pass the blueprint to the core for registration.
 
+
+### Installing plugins
+
 To "install" a plugin into telemetryui copy the plugin folder to the plugins
 folder under telemetryui (i.e.)
 
 ```bash
 
-cp my_plugin telemetrics-backend/telemetryui/plugins/my_plugin
+cp my_plugin  my_plugin
 ```
 
 un-comment the PLUGINS section of config (or config_local) and add your plugin to
@@ -109,4 +130,3 @@ class Config(object):
 
 Remember the plugin name is the name of the python module that was dropped
 in the plugins folder in telemetryui.
-
