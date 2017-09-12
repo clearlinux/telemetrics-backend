@@ -28,15 +28,17 @@ db = SQLAlchemy(app)
 
 MAX_WEEK_KEEP_RECORDS = app.config.get("MAX_WEEK_KEEP_RECORDS", 5)
 
+
 class Classification(db.Model):
     __tablename__ = 'classification'
     id = db.Column(db.Integer, primary_key=True)
     classification = db.Column(db.String)
-    domain =  db.Column(db.String)
+    domain = db.Column(db.String)
     probe = db.Column(db.String)
 
     def __init__(self, class_str):
         self.classification = class_str
+
 
 class Build(db.Model):
     __tablename__ = 'build'
@@ -45,6 +47,7 @@ class Build(db.Model):
 
     def __init__(self, build_num):
         self.build = build_num
+
 
 class Guilty(db.Model):
     __tablename__ = 'guilty'
@@ -60,35 +63,35 @@ class Guilty(db.Model):
 
     @staticmethod
     def update_comment(guilty_id, comment):
-        guilty = Guilty.query.filter_by(id = guilty_id).first()
+        guilty = Guilty.query.filter_by(id=guilty_id).first()
         guilty.comment = comment
         db.session.commit()
 
     @staticmethod
     def get_function(guilty_id):
-        guilty = Guilty.query.filter_by(id = guilty_id).first()
+        guilty = Guilty.query.filter_by(id=guilty_id).first()
         return guilty and guilty.function or ""
 
     @staticmethod
     def get_module(guilty_id):
-        guilty = Guilty.query.filter_by(id = guilty_id).first()
+        guilty = Guilty.query.filter_by(id=guilty_id).first()
         return guilty and guilty.module or ""
 
     @staticmethod
     def update_hidden(guilty_id, status):
-        guilty = Guilty.query.filter_by(id = guilty_id).first()
+        guilty = Guilty.query.filter_by(id=guilty_id).first()
         guilty.hide = status
         db.session.commit()
 
     @staticmethod
     def get_hidden_value(guilty_id):
-        guilty = Guilty.query.filter_by(id = guilty_id).first()
+        guilty = Guilty.query.filter_by(id=guilty_id).first()
         return guilty and guilty.hide or False
 
     @staticmethod
     def get_hidden_guilties():
         q = db.session.query(Guilty.id, Guilty.function, Guilty.module)
-        q = q.filter(Guilty.hide == True)
+        q = q.filter(Guilty.hide is True)
         q = q.order_by(Guilty.function)
         return q.all()
 
@@ -120,6 +123,9 @@ class Record(db.Model):
     classification_id = db.Column(db.Integer, db.ForeignKey('classification.id'))
     build_id = db.Column(db.Integer, db.ForeignKey('build.id'))
     guilty_id = db.Column(db.Integer, db.ForeignKey('guilty.id'))
+    board_name = db.Column(db.String, default='')
+    bios_version = db.Column(db.String, default='')
+    cpu_model = db.Column(db.String, default='')
     external = db.Column(db.Boolean, default=False)
 
     classification = db.relationship('Classification', backref=db.backref('records', lazy='dynamic'), lazy='joined')
@@ -127,9 +133,9 @@ class Record(db.Model):
     guilty = db.relationship('Guilty', backref=db.backref('records', lazy='dynamic'), lazy='joined')
 
     def __init__(self, machine_id, host_type, severity, classification,
-                build, architecture, kernel_version, record_format_version,
-                ts_capture, ts_reception, payload_format_version, os_name,
-                external, payload):
+                 build, architecture, kernel_version, record_format_version,
+                 ts_capture, ts_reception, payload_format_version, os_name,
+                 board_name, bios_version, cpu_model, external, payload):
         self.machine_id = machine_id
         self.machine = host_type
         self.architecture = architecture
@@ -144,6 +150,10 @@ class Record(db.Model):
         self.payload_format_version = payload_format_version
         self.os_name = os_name
         self.external = external
+        self.board_name = board_name
+        self.bios_version = bios_version
+        self.cpu_model = cpu_model
+
         try:
             self.payload = payload.encode('utf-8')
         except UnicodeError:
@@ -157,17 +167,20 @@ class Record(db.Model):
 
     def to_dict(self):
         record = {
-            'machine_id' : self.machine_id,
-            'machine_type' : self.machine,
-            'arch' : self.architecture,
-            'build' : self.build.build,
-            'kernel_version' : self.kernel_version,
-            'ts_capture' : strftime('%Y-%m-%d %H:%M:%S UTC', gmtime(self.tsp)),
-            'ts_reception' : strftime('%Y-%m-%d %H:%M:%S UTC', gmtime(self.tsp_server)),
-            'severity' : self.severity,
-            'classification' : self.classification.classification,
-            'record_format_version' : self.record_format_version,
-            'payload' : self.backtrace,
+            'machine_id': self.machine_id,
+            'machine_type': self.machine,
+            'arch': self.architecture,
+            'build': self.build.build,
+            'kernel_version': self.kernel_version,
+            'ts_capture': strftime('%Y-%m-%d %H:%M:%S UTC', gmtime(self.tsp)),
+            'ts_reception': strftime('%Y-%m-%d %H:%M:%S UTC', gmtime(self.tsp_server)),
+            'severity': self.severity,
+            'classification': self.classification.classification,
+            'record_format_version': self.record_format_version,
+            'payload': self.backtrace,
+            'board_name': self.board_name,
+            'bios_version': self.bios_version,
+            'cpu_model': self.cpu_model
         }
         return record
 
@@ -190,24 +203,23 @@ class Record(db.Model):
         return Record.query.all()
 
     @staticmethod
-    def create(machine_id, host_type,severity, classification, build, architecture, kernel_version,
-            record_format_version, ts_capture, ts_reception,
-            payload_format_version, os_name, external, payload):
+    def create(machine_id, host_type, severity, classification, build, architecture, kernel_version,
+               record_format_version, ts_capture, ts_reception,
+               payload_format_version, os_name, board_name, bios_version, cpu_model, external, payload):
         try:
-           record = Record(machine_id, host_type,severity, classification,
-                        build, architecture, kernel_version,
-                        record_format_version, ts_capture, ts_reception,
-                        payload_format_version, os_name, external, payload)
-           db.session.add(record)
-           db.session.commit()
-           return record
+            record = Record(machine_id, host_type, severity, classification, build, architecture, kernel_version,
+                            record_format_version, ts_capture, ts_reception, payload_format_version, os_name,
+                            board_name, bios_version, cpu_model, external, payload)
+            db.session.add(record)
+            db.session.commit()
+            return record
         except:
-           db.session.rollback()
-           raise
+            db.session.rollback()
+            raise
 
     @staticmethod
     def query_records(build, classification, severity, machine_id, limit,
-                    interval_sec=None):
+                      interval_sec=None):
         records = Record.query
         if build is not None:
             records = records.join(Record.build).filter_by(build=build)
@@ -232,6 +244,7 @@ class Record(db.Model):
             records = records.limit(limit)
 
         return records.all()
+
     @staticmethod
     def get_record(record_id):
         record = Record.query.filter_by(id=record_id).first()
@@ -274,7 +287,7 @@ class Record(db.Model):
     @staticmethod
     def delete_records():
         try:
-            sec_weeks =  MAX_WEEK_KEEP_RECORDS * 7 * 24 * 60 * 60
+            sec_weeks = MAX_WEEK_KEEP_RECORDS * 7 * 24 * 60 * 60
             current_time = time()
             time_weeks_ago = current_time - sec_weeks
             q = db.session.query(Record).filter(Record.tsp_server < time_weeks_ago)
@@ -283,6 +296,8 @@ class Record(db.Model):
             print("Deleted {} old records".format(count))
         except:
             db.session.rollback()
+
+    @staticmethod
     def get_recordcnts_by_build():
         q = db.session.query(Build.build, db.func.count(Record.id)).join(Record.build)
         q = q.filter(Build.build.op('~')('^[0-9]+$'))
@@ -310,7 +325,7 @@ class Record(db.Model):
             cs_regex = [cs[0] for cs in q.all()]
             parts = ["{0}/{1}".format(cs.split("/")[0], cs.split("/")[1]) for cs in cs_regex]
             parts.extend([cs.split("/")[0] for cs in parts])
-            cs_regex.extend([x+"/*" for x in set([cs for cs in parts if parts.count(cs) > 1])])
+            cs_regex.extend([x + "/*" for x in set([cs for cs in parts if parts.count(cs) > 1])])
             cs_regex.sort()
             return cs_regex
         return q.all()
@@ -332,7 +347,6 @@ class Record(db.Model):
     def get_recordcnts_by_severity():
         q = db.session.query(Record.severity, db.func.count(Record.id)).group_by(Record.severity).all()
         return q
-
 
     @staticmethod
     def get_crashcnts_by_class(classes=None):
@@ -362,17 +376,17 @@ class Record(db.Model):
         q = db.session.query(Guilty.function, Guilty.module, Build.build, db.func.count(Record.id).label('total'), Guilty.id, Guilty.comment)
         q = q.join(Record)
         q = q.join(Build)
-        q = q.join(Classification).filter(Record.classification_id==Classification.id)
+        q = q.join(Classification).filter(Record.classification_id == Classification.id)
         if not classes:
             classes = ['org.clearlinux/crash/clr']
         q = q.filter(Classification.classification.in_(classes))
         q = q.filter(Build.build.op('~')('^[0-9][0-9]+$'))
-        q = q.filter(Guilty.hide == False)
+        q = q.filter(Guilty.hide is False)
         q = q.group_by(Guilty.function, Guilty.module, Guilty.comment, Guilty.id, Build.build)
         q = q.order_by(desc(cast(Build.build, db.Integer)), desc('total'))
         # query for records created in the last week (~ 10 Clear builds)
         q = q.filter(Build.build.in_(sorted(tuple(set([x[2] for x in q.all()])), key=lambda x: int(x))[-8:]))
-        interval_sec =  24 * 60 * 60 * 7
+        interval_sec = 24 * 60 * 60 * 7
         current_time = time()
         sec_in_past = current_time - interval_sec
         q = q.filter(Record.tsp > sec_in_past)
@@ -385,7 +399,7 @@ class Record(db.Model):
             classes = ['org.clearlinux/crash/clr']
         q = q.filter(Classification.classification.in_(classes))
         q = q.filter(Record.os_name == 'clear-linux-os')
-        q = q.filter(Record.processed == False)
+        q = q.filter(Record.processed is False)
         if id:
             q = q.filter(Record.id == id)
         return q.all()
@@ -437,7 +451,7 @@ class Record(db.Model):
         if machine_id:
             q = q.filter(Record.machine_id == machine_id)
         if most_recent:
-            interval_sec =  24 * 60 * 60 * int(most_recent)
+            interval_sec = 24 * 60 * 60 * int(most_recent)
             current_time = time()
             sec_in_past = current_time - interval_sec
             q = q.filter(Record.tsp > sec_in_past)
@@ -467,7 +481,7 @@ class Record(db.Model):
         q = q.group_by(Build.build, Record.machine_id, Record.guilty_id)
         q = q.order_by(desc(cast(Build.build, db.Integer)), desc('total'))
         if most_recent:
-            interval_sec =  24 * 60 * 60 * int(most_recent)
+            interval_sec = 24 * 60 * 60 * int(most_recent)
             current_time = time()
             sec_in_past = current_time - interval_sec
             q = q.filter(Record.tsp > sec_in_past)
@@ -476,13 +490,12 @@ class Record(db.Model):
     @staticmethod
     def get_update_msgs():
         q = db.session.query(Record.backtrace).join(Classification)
-        q = q.filter(Classification.classification=="org.clearlinux/swupd-client/update")
+        q = q.filter(Classification.classification == "org.clearlinux/swupd-client/update")
 
-        sec_2_weeks =  24 * 60 * 60 * 7
+        sec_2_weeks = 24 * 60 * 60 * 7
         current_time = time()
         time_2_weeks_ago = current_time - sec_2_weeks
-
-        #query for records created in that last 2 weeks
+        # query for records created in that last 2 weeks
         q = q.filter(Record.tsp > time_2_weeks_ago)
         return q
 
@@ -492,7 +505,7 @@ class Record(db.Model):
         q = q.filter(Classification.classification.like('org.clearlinux/swupd-client/%'))
 
         if most_recent:
-            interval_sec =  24 * 60 * 60 * int(most_recent)
+            interval_sec = 24 * 60 * 60 * int(most_recent)
             current_time = time()
             sec_in_past = current_time - interval_sec
             q = q.filter(Record.tsp > sec_in_past)
@@ -504,17 +517,17 @@ class Record(db.Model):
     def get_heartbeat_msgs(most_recent=None):
         # These two expressions are SQL CASE conditional expressions, later
         # used within count(distinct ...) aggregates for the query.
-        internal_expr = case([(Record.external==False, Record.machine_id),]).label('internal_count')
-        external_expr = case([(Record.external==True, Record.machine_id),]).label('external_count')
+        internal_expr = case([(Record.external is False, Record.machine_id), ]).label('internal_count')
+        external_expr = case([(Record.external is True, Record.machine_id), ]).label('external_count')
 
         q = db.session.query(Build.build, db.func.count(db.distinct(internal_expr)), db.func.count(db.distinct(external_expr)))
         q = q.join(Record).join(Classification)
-        q = q.filter(Classification.classification=="org.clearlinux/heartbeat/ping")
+        q = q.filter(Classification.classification == "org.clearlinux/heartbeat/ping")
         q = q.filter(Record.os_name == 'clear-linux-os')
         q = q.group_by(Build.build)
 
         if most_recent:
-            interval_sec =  24 * 60 * 60 * int(most_recent)
+            interval_sec = 24 * 60 * 60 * int(most_recent)
             current_time = time()
             sec_in_past = current_time - interval_sec
             q = q.filter(Record.tsp > sec_in_past)
@@ -541,7 +554,7 @@ class GuiltyBlacklist(db.Model):
 
     def to_dict(self):
         guilty = {
-            'function' : self.function,
+            'function': self.function,
             'module': self.module
         }
         return guilty
@@ -549,13 +562,13 @@ class GuiltyBlacklist(db.Model):
     @staticmethod
     def add(func, mod):
         try:
-           g = GuiltyBlacklist(func, mod)
-           db.session.add(g)
-           db.session.commit()
-           return g
+            g = GuiltyBlacklist(func, mod)
+            db.session.add(g)
+            db.session.commit()
+            return g
         except:
-           db.session.rollback()
-           raise
+            db.session.rollback()
+            raise
 
     @staticmethod
     def remove(func, mod):
@@ -582,8 +595,8 @@ class GuiltyBlacklist(db.Model):
         try:
             for i in to_add:
                 if not GuiltyBlacklist.exists(i[0], i[1]):
-                   g = GuiltyBlacklist(i[0], i[1])
-                   db.session.add(g)
+                    g = GuiltyBlacklist(i[0], i[1])
+                    db.session.add(g)
             for i in to_remove:
                 if GuiltyBlacklist.exists(i[0], i[1]):
                     q = db.session.query(GuiltyBlacklist)
@@ -592,8 +605,8 @@ class GuiltyBlacklist(db.Model):
                     db.session.delete(entry)
             db.session.commit()
         except:
-           db.session.rollback()
-           raise
+            db.session.rollback()
+            raise
 
 
 # vi: ts=4 et sw=4 sts=4
