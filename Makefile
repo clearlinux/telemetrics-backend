@@ -15,6 +15,10 @@ release:
 	git tag -a -m "Release $(VERSION)" v$(VERSION); \
 	printf "\nNew release $(VERSION) tagged!\n\n"
 
+run-tests:
+	PYTHONPATH=/$(shell pwd)/collector python3 collector/collector/tests/headers.py
+	PYTHONPATH=/$(shell pwd)/collector python3 collector/collector/tests/api.py	
+
 tag-production:
 	@TODAY=`date "+%F-%H%M%S"`; \
 	git rev-parse production-$$TODAY &> /dev/null; \
