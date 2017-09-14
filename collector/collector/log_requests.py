@@ -17,19 +17,17 @@
 from flask import request, current_app, app
 import logging
 
+
 @app.before_request
 def before_request():
-    headers = request.headers
-    payload = request.data
-    print('Before request')
     current_app.logger.info('\t'.join([
-            datetime.datetime.today().ctime(),
-            request.remote_addr,
-            request.method,
-            request.url,
-            str(request.data),
-            ', '.join([': '.join(x) for x in request.headers])])
-        )
+        datetime.datetime.today().ctime(),
+        request.remote_addr,
+        request.method,
+        request.url,
+        str(request.data),
+        ', '.join([': '.join(x) for x in request.headers])])
+    )
 
 
 # vi: ts=4 et sw=4 sts=4

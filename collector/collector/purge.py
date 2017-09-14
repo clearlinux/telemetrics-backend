@@ -21,7 +21,7 @@ try:
     import uwsgi
     from uwsgidecorators import cron
 
-    #Runs cron job at 4:30 every day
+    # Runs cron job at 4:30 every day
     @cron(30, 4, -1, -1, -1, target='spooler')
     def purge_task(signum):
         app.logger.info("Running cron job for purging records")
