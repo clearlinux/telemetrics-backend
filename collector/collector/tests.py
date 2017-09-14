@@ -22,12 +22,13 @@ import json
 classification = 'classification'
 severity = 'severity'
 kernel_version = 'kernel_version'
-record_version = 'record_format_version';
+record_version = 'record_format_version'
 machine_id = 'machine_id'
 host_type = 'host_type'
 arch = 'arch'
 build = 'build'
 timestamp = 'creation_timestamp'
+
 
 class TestHandler(unittest.TestCase):
     def setUp(self):
@@ -46,22 +47,23 @@ class TestHandler(unittest.TestCase):
         self.app_context.pop()
 
     def get_api_headers(self):
-        headers = { record_version : 1,
-                    classification : 'test/invalid',
-                    severity : 2,
-                    machine_id : '1234',
-                    timestamp : 2752515,
-                    arch : 'x86_64',
-                    host_type : 'LenovoT20',
-                    kernel_version:'3.16',
-                    build : '550'
+        headers = {
+            record_version: 1,
+            classification: 'test/invalid',
+            severity: 2,
+            machine_id: '1234',
+            timestamp: 2752515,
+            arch: 'x86_64',
+            host_type: 'LenovoT20',
+            kernel_version: '3.16',
+            build: '550'
         }
         return headers
 
     def test_record_created(self):
         headers = self.get_api_headers()
-        data = "hello";
-        response = self.client.post('/', headers=headers, data = data)
+        data = "hello"
+        response = self.client.post('/', headers=headers, data=data)
         self.assertTrue(response.status_code == 201)
         json_resp = json.loads(response.data)
         self.assertTrue(json_resp['classification'] == headers[classification])
@@ -78,7 +80,7 @@ class TestHandler(unittest.TestCase):
     def test_post_fail_missing_classifiction(self):
         headers = self.get_api_headers()
         del headers[classification]
-        response = self.client.post('/', headers=headers, data ='test')
+        response = self.client.post('/', headers=headers, data='test')
         self.assertTrue(response.status_code == 400)
         json_resp = json.loads(response.data)
         self.assertTrue('Classification missing' in response.data)
@@ -86,49 +88,49 @@ class TestHandler(unittest.TestCase):
     def test_post_fail_missing_severity(self):
         headers = self.get_api_headers()
         del headers[severity]
-        response = self.client.post('/', headers=headers, data ='test')
+        response = self.client.post('/', headers=headers, data='test')
         self.assertTrue(response.status_code == 400)
         self.assertTrue('Severity missing' in response.data)
 
     def test_post_fail_missing_kernel_version(self):
         headers = self.get_api_headers()
         del headers[kernel_version]
-        response = self.client.post('/', headers=headers, data ='test')
+        response = self.client.post('/', headers=headers, data='test')
         self.assertTrue(response.status_code == 400)
         self.assertTrue('Kernel version missing' in response.data)
 
     def test_post_fail_missing_host_type(self):
         headers = self.get_api_headers()
         del headers[host_type]
-        response = self.client.post('/', headers=headers, data ='test')
+        response = self.client.post('/', headers=headers, data='test')
         self.assertTrue(response.status_code == 400)
         self.assertTrue('Host type missing' in response.data)
 
     def test_post_fail_missing_machine_id(self):
         headers = self.get_api_headers()
         del headers[machine_id]
-        response = self.client.post('/', headers=headers, data ='test')
+        response = self.client.post('/', headers=headers, data='test')
         self.assertTrue(response.status_code == 400)
         self.assertTrue('Machine id missing' in response.data)
 
     def test_post_fail_missing_arch(self):
         headers = self.get_api_headers()
         del headers[arch]
-        response = self.client.post('/', headers=headers, data ='test')
+        response = self.client.post('/', headers=headers, data='test')
         self.assertTrue(response.status_code == 400)
         self.assertTrue('Architecture missing' in response.data)
 
     def test_post_fail_missing_build(self):
         headers = self.get_api_headers()
         del headers[build]
-        response = self.client.post('/', headers=headers, data ='test')
+        response = self.client.post('/', headers=headers, data='test')
         self.assertTrue(response.status_code == 400)
         self.assertTrue('Build missing' in response.data)
 
     def test_post_fail_missing_record_version(self):
         headers = self.get_api_headers()
         del headers[record_version]
-        response = self.client.post('/', headers=headers, data ='test')
+        response = self.client.post('/', headers=headers, data='test')
         self.assertTrue(response.status_code == 400)
         self.assertTrue('Record format version missing' in response.data)
 

@@ -14,26 +14,27 @@
 # limitations under the License.
 #
 
-import re, time, os, datetime
+import re
+import time
+import datetime
 from flask import request
 from flask import jsonify
-from . import app
-from flask import current_app
 from flask import redirect
-from .model import Record, Classification, Build
-from .crash import process_guilties, is_crash_classification
+from .model import (
+    Classification,
+    Build)
+from .crash import (
+    process_guilties,
+    is_crash_classification)
 from .purge import *
-import sys
-import json
-import cgi
 
 tm_version_regex = re.compile("^[0-9]+\.[0-9]+$")
 client_id_regex = re.compile(
     "^[0-9]+[ \t]+[-/.:_+*a-zA-Z0-9]+[ \t]+[-/.:_+*a-zA-Z0-9]+$")
 ts_v3_regex = re.compile("^[0-9]+$")
 # FIXME: configurable limits
-max_payload_len_inline = 30 * 1024	# 30k
-max_payload_len = 300 * 1024		# 300k
+max_payload_len_inline = 30 * 1024	 # 30k
+max_payload_len = 300 * 1024		 # 300k
 POSTGRES_INT_MAX = 2147483647
 
 # see config.py for the meaning of this value
@@ -59,52 +60,26 @@ class InvalidUsage(Exception):
     def __str__(self):
         return self.message
 
+
 @app.errorhandler(InvalidUsage)
 def handle_invalid_usage(error):
-    #return as json
     response = jsonify(error.to_dict())
     response.status_code = error.status_code
     return response
+
 
 @app.before_request
 def before_request():
     headers = request.headers
     payload = request.data
     app.logger.info('\t'.join([
-            datetime.datetime.today().ctime(),
-            #request.remote_addr,
-            request.method,
-            request.url,
-            str(request.data),
-            ', '.join([': '.join(x) for x in request.headers])])
-        )
+        datetime.datetime.today().ctime(),
+        request.method,
+        request.url,
+        str(request.data),
+        ', '.join([': '.join(x) for x in request.headers])])
+    )
 
-def verify_record_fields(record):
-    """
-    By this time, records fields have been verify for presence and
-    general validity of their values.
-    """
-    #Do no verification for now
-    return
-    if ts_dr_max_delta != None \
-            and abs(record['ts_delivery'] - record['ts_reception']) \
-        > ts_dr_max_delta:
-        raise record_rejected_e(
-            "rejected: DR delta {}s greater than {}s"
-            .format(abs(record['ts_delivery'] - record['ts_reception']),
-               ts_dr_max_delta))
-
-    # If the DR delta check passes, this means we more or less trust
-    # the clock of the client...still he could be lying, but at least
-    # it will have to lie with in the boundaries of the DR delta.
-    if ts_capture_max_age != None \
-            and abs(record['ts_capture'] - record['ts_reception']) \
-        > ts_capture_max_age:
-        raise record_rejected_e(
-            "rejected: capture age {}s greater than {}s"
-            .format(abs(record['ts_capture'] - record['ts_reception']),
-               ts_capture_max_age))
-    #Do further verification based on filters on the machine_id etc
 
 @app.route("/", methods=['GET', 'POST'])
 @app.route("/v2/collector", methods=['GET', 'POST'])
@@ -209,20 +184,6 @@ def handler():
         if classification == "org.clearlinux/mce/corrected" and "THERMAL" in payload:
             classification = "org.clearlinux/mce/thermal"
 
-        _record = {
-            'machine_id' : machine_id,
-            'machine_type' : host_type,
-            'arch' : architecture,
-            'build_no' : build,
-            'kernel_version' : kernel_version,
-            'ts_capture' : ts_capture,
-            'ts_delivery' : ts_capture,
-            'ts_reception' : ts_reception,
-            'severity' : severity,
-            'classification' : classification,
-            'record_format_version' : record_format_version
-        }
-
         db_class = Classification.query.filter_by(classification=classification).first()
         if db_class is None:
             db_class = Classification(classification)
@@ -231,9 +192,9 @@ def handler():
         if db_build is None:
             db_build = Build(build)
 
-        db_rec =  Record.create(machine_id, host_type,severity, db_class, db_build, architecture, kernel_version,
-                                record_format_version, ts_capture, ts_reception,
-                                payload_format_version, os_name, external, payload)
+        db_rec = Record.create(machine_id, host_type, severity, db_class, db_build, architecture, kernel_version,
+                               record_format_version, ts_capture, ts_reception, payload_format_version, os_name,
+                               external, payload)
 
         if is_crash_classification(classification):
             # must pass args as bytes to uwsgi under Python 3
@@ -245,6 +206,7 @@ def handler():
     else:
         # print all the recorded messages so far
         return redirect("/telemetryui", code=302)
+
 
 @app.route("/api/records", methods=['GET'])
 def records_api_handler():
@@ -270,7 +232,7 @@ def records_api_handler():
         raise InvalidUsage("Severity should be a numeric value", 400)
 
     classification = request.args.get('classification')
-    if classification and len(classification)>140:
+    if classification and len(classification) > 140:
         raise InvalidUsage("Classification string too long", 400)
 
     build = request.args.get('build')
@@ -292,11 +254,11 @@ def records_api_handler():
 
         created_in_days = int(created_in_days)
 
-        if int(created_in_days ) < 0:
+        if int(created_in_days) < 0:
             raise InvalidUsage("created_in_sec should not be negative", 400)
         elif created_in_days > 30:
             created_in_days = 30
-        interval_sec =  24 * 60 * 60 * created_in_days
+        interval_sec = 24 * 60 * 60 * created_in_days
     else:
         created_in_sec = request.args.get('created_in_sec')
 
@@ -318,11 +280,10 @@ def records_api_handler():
     elif not limit.isdigit():
         raise InvalidUsage("Limit should be a numeric value", 400)
 
-
     records = Record.query_records(build, classification, severity, machine_id, limit, interval_sec)
     record_list = [Record.to_dict(rec) for rec in records]
 
-    return jsonify(records = record_list)
+    return jsonify(records=record_list)
 
 
 # vi: ts=4 et sw=4 sts=4

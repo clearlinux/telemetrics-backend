@@ -19,6 +19,7 @@
 
 import logging
 
+
 class Config(object):
     DEBUG = True
     TESTING = False
