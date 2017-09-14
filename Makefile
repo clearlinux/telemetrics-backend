@@ -17,6 +17,7 @@ release:
 
 run-tests:
 	PYTHONPATH=/$(shell pwd)/collector python3 collector/collector/tests/handler.py
+	PYTHONPATH=/$(shell pwd)/collector python3 collector/collector/tests/rest_api.py
 
 tag-production:
 	@TODAY=`date "+%F-%H%M%S"`; \
