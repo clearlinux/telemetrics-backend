@@ -17,8 +17,8 @@
 from flask import Flask
 from . import config
 from flask_sqlalchemy import SQLAlchemy
-import logging
 from logging.handlers import RotatingFileHandler
+
 
 def configure_app(config_object, app):
     app.config.from_object(config_object)
@@ -29,11 +29,12 @@ db = SQLAlchemy()
 app.config.from_object(config.Config)
 
 try:
-   #try importing from the local dev configuration if it exists
-   from . import config_local
-   app.config.from_object(config_local.Config)
-except:
-   pass
+    # try importing from the local dev configuration if it exists
+    from . import config_local
+    app.config.from_object(config_local.Config)
+except Exception as e:
+    print(e)
+    pass
 
 from .model import *
 from . import report_handler

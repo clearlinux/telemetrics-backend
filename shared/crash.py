@@ -47,16 +47,18 @@ filters = []
 
 frame_pattern = "^(#\d+ )(.+)( - \[(.*)\](.*))$"
 
-backtrace_classes = [ 'org.clearlinux/crash/clr',
-                      'org.clearlinux/kernel/bug',
-                      'org.clearlinux/kernel/stackoverflow',
-                      'org.clearlinux/kernel/warning'
-                    ]
+backtrace_classes = [
+    'org.clearlinux/crash/clr',
+    'org.clearlinux/kernel/bug',
+    'org.clearlinux/kernel/stackoverflow',
+    'org.clearlinux/kernel/warning'
+]
 
-other_classes = [ 'org.clearlinux/crash/unknown',
-                  'org.clearlinux/crash/clr-build',
-                  'org.clearlinux/crash/error'
-                ]
+other_classes = [
+    'org.clearlinux/crash/unknown',
+    'org.clearlinux/crash/clr-build',
+    'org.clearlinux/crash/error'
+]
 
 
 def get_all_classes():
