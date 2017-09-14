@@ -213,7 +213,7 @@ The current views are:
 
 To provided users with an extensible framework a concept of "plugin views" was
 implemented to add views without the need to make changes to the core of the
-application. To read more about (plugin view)[/telemetryui/telemetryui/plugins/README.md]
+application. To read more about [plugin view](/telemetryui/telemetryui/plugins/README.md)
 go to relevant documentation.
 
 
