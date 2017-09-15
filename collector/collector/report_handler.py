@@ -36,9 +36,38 @@ ts_v3_regex = re.compile("^[0-9]+$")
 max_payload_len_inline = 30 * 1024	 # 30k
 max_payload_len = 300 * 1024		 # 300k
 POSTGRES_INT_MAX = 2147483647
+MAX_NUM_RECORDS = '1000'
+MAX_INTERVAL_SEC = 24 * 60 * 60 * 30    # 30 days in seconds
 
 # see config.py for the meaning of this value
 TELEMETRY_ID = app.config.get("TELEMETRY_ID", "6907c830-eed9-4ce9-81ae-76daf8d88f0f")
+
+
+REQUIRED_HEADERS_V1 = (
+    'Arch',
+    'Build',
+    'Creation-Timestamp',
+    'Classification',
+    'Host-Type',
+    'Kernel-Version',
+    'Machine-Id',
+    'Severity',
+    'Record-Format-Version',
+)
+
+REQUIRED_HEADERS_V2 = REQUIRED_HEADERS_V1 + (
+    'Payload-Format-Version',
+    'System-Name',
+    'X-Telemetry-Tid',
+)
+
+REQUIRED_HEADERS_V3 = REQUIRED_HEADERS_V2 + (
+    'Board-Name',
+    'Bios-Version',
+    'Cpu-Model',
+)
+
+VALID_RECORD_FORMAT_VERSIONS = [1, 2, 3]
 
 
 class InvalidUsage(Exception):
@@ -81,136 +110,196 @@ def before_request():
     )
 
 
+def validate_headers(headers, required_headers):
+    req_headers = dict(headers)
+    req_headers_keys = req_headers.keys()
+    for header in required_headers:
+        if header not in req_headers_keys:
+            raise InvalidUsage("Request header {} is missing".format(header), 400)
+        if not request.headers.get(header):
+            raise InvalidUsage("Request header {} is blank".format(header), 400)
+    return True
+
+
+def collector_post_handler():
+
+    tid_header = request.headers.get('X-Telemetry-TID')
+
+    # The collector only accepts records with the configured TID value.
+    # Make sure the TID in the collector config.py matches the TID
+    # configured for telemetrics-client on the systems from which this
+    # collector receives records.
+    if tid_header != TELEMETRY_ID:
+        err = "Telemetry ID mismatch. Expected: {}; Actual: {}".format(TELEMETRY_ID, tid_header)
+        raise InvalidUsage(err, 400)
+
+    record_format_version = request.headers.get('Record-Format-Version', -1)
+    if str(record_format_version).isdigit() and int(record_format_version) not in VALID_RECORD_FORMAT_VERSIONS:
+        raise InvalidUsage("Record-Format-Version is invalid", 400)
+
+    # Validate required headers based on Record Version
+    if int(record_format_version) == 1:
+        validate_headers(request.headers, REQUIRED_HEADERS_V1)
+    elif int(record_format_version) == 2:
+        validate_headers(request.headers, REQUIRED_HEADERS_V2)
+    elif int(record_format_version) == 3:
+        validate_headers(request.headers, REQUIRED_HEADERS_V3)
+    else:
+        raise InvalidUsage("Record-Format-Version is invalid", 400)
+
+    severity = request.headers.get('Severity')
+    classification = request.headers.get('Classification')
+    machine_id = request.headers.get('Machine-Id')
+    if len(machine_id) > 32:
+        raise InvalidUsage("Machine id too long", 400)
+    timestamp = request.headers.get('Creation-Timestamp')
+    ts_capture = int(timestamp)
+    ts_reception = time.time()
+
+    architecture = request.headers.get('Arch')
+    host_type = request.headers.get('Host-Type')
+    kernel_version = request.headers.get('Kernel-Version')
+    board_name = request.headers.get('Board-Name')
+    cpu_model = request.headers.get('Cpu-Model')
+    bios_version = request.headers.get('Bios-Version')
+    os_name = request.headers.get('System-Name')
+    os_name = os_name.replace('"', '').replace("'", "")
+    build = request.headers.get('Build')
+    # It is common to see the build numbers quoted in os-release. We don't
+    # need the quotes, so strip them from the semantic value.
+    build = build.replace('"', '').replace("'", "")
+    # The build number is stored as a string in the database, but if this
+    # record is from a Clear Linux OS system, only accept an integer.
+    # Otherwise, loosen the restriction to the characters listed for
+    # VERSION_ID in os-release(5) in addition to the capital letters A-Z.
+    if os_name == 'clear-linux-os':
+        build_regex = re.compile(r"^[0-9]+$")
+        if not build_regex.match(build):
+            raise InvalidUsage("Clear Linux OS build version has invalid characters")
+    else:
+        build_regex = re.compile(r"^[-_a-zA-Z0-9.]+$")
+        if not build_regex.match(build):
+            raise InvalidUsage("Build version has invalid characters")
+
+    payload_format_version = request.headers.get('Payload-Format-Version')
+    if int(payload_format_version) > POSTGRES_INT_MAX:
+        raise InvalidUsage("Payload format version outside of range supported")
+
+    external = request.headers.get('X-CLR-External')
+    if external and external == "true":
+        external = True
+    else:
+        external = False
+
+    try:
+        # prefer UTF-8, if possible
+        payload = request.data.decode('utf-8')
+    except UnicodeError:
+        # fallback to Latin-1, since it accepts all byte values
+        payload = request.data.decode('latin-1')
+
+    if classification == "org.clearlinux/mce/corrected" and "THERMAL" in payload:
+        classification = "org.clearlinux/mce/thermal"
+
+    db_class = Classification.query.filter_by(classification=classification).first()
+    if db_class is None:
+        db_class = Classification(classification)
+
+    db_build = Build.query.filter_by(build=build).first()
+    if db_build is None:
+        db_build = Build(build)
+
+    db_rec = Record.create(machine_id, host_type, severity, db_class, db_build, architecture, kernel_version,
+                           record_format_version, ts_capture, ts_reception, payload_format_version, os_name,
+                           board_name, bios_version, cpu_model, external, payload)
+
+    if is_crash_classification(classification):
+        # must pass args as bytes to uwsgi under Python 3
+        process_guilties(klass=classification.encode(), id=str(db_rec.id).encode())
+
+    resp = jsonify(db_rec.to_dict())
+    resp.status_code = 201
+    return resp
+
+
+def get_records_api_handler():
+    query_filter = {}
+
+    params = ['severity', 'classification', 'build', 'machine_id', 'created_in_days', 'created_in_sec', 'limit']
+
+    # Build filter query
+    for param in params:
+        param_val = request.args.get(param, None)
+        if param_val is not None:
+            query_filter.update({param: param_val})
+
+    # Validate query parameters correctness
+    if not query_filter.get('severity', '123').isdigit():
+        raise InvalidUsage("Severity should be a numeric value", 400)
+
+    if len(query_filter.get('classification', 'abc')) > 140:
+        raise InvalidUsage("Classification string too long", 400)
+
+    if len(query_filter.get('build', '1234')) > 256:
+        raise InvalidUsage("Build string too long", 400)
+
+    if len(query_filter.get('machine_id', '1234')) > 32:
+        raise InvalidUsage("Machine id too long", 400)
+
+    if not query_filter.get('created_in_days', '123').isdigit():
+        raise InvalidUsage("created_in_days should be a numeric value", 400)
+
+    if not query_filter.get('created_in_sec', '123').isdigit():
+        raise InvalidUsage("created_in_sec should be a numeric value", 400)
+
+    if not query_filter.get('created_in_days', 123) > 0:
+        raise InvalidUsage("created_in_days should not be negative", 400)
+
+    if not query_filter.get('created_in_sec', 123) > 0:
+        raise InvalidUsage("created_in_sec should not be negative", 400)
+
+    if not query_filter.get('limit', '1000').isdigit():
+        raise InvalidUsage("Limit should not be negative", 400)
+
+    created_in_days = query_filter.get('created_in_days', None)
+    created_in_sec = query_filter.get('created_in_sec', None)
+    interval_sec = None
+
+    if created_in_days is not None:
+        created_in_days = int(created_in_days)
+        interval_sec = 24 * 60 * 60 * created_in_days
+    elif created_in_sec is not None:
+        interval_sec = int(created_in_sec)
+
+    if interval_sec is not None and interval_sec > MAX_INTERVAL_SEC:
+        interval_sec = MAX_INTERVAL_SEC
+
+    limit = query_filter.get('limit', MAX_NUM_RECORDS)
+    build = query_filter.get('build', None)
+    classification = query_filter.get('classification', None)
+    severity = query_filter.get('severity', None)
+    machine_id = query_filter.get('machine_id', None)
+
+    records = Record.query_records(build, classification, severity, machine_id, limit, interval_sec)
+    record_list = [Record.to_dict(rec) for rec in records]
+
+    return jsonify(records=record_list)
+
+# ########## Routes ###########
+
+
 @app.route("/", methods=['GET', 'POST'])
 @app.route("/v2/collector", methods=['GET', 'POST'])
 def handler():
     if request.method == 'POST':
-        tid_header = request.headers.get('X-Telemetry-TID')
-        if not tid_header:
-            raise InvalidUsage("Telemetry ID (TID) missing", 400)
-
-        # The collector only accepts records with the configured TID value.
-        # Make sure the TID in the collector config.py matches the TID
-        # configured for telemetrics-client on the systems from which this
-        # collector receives records.
-        if tid_header != TELEMETRY_ID:
-            err = "Telemetry ID mismatch. Expected: {}; Actual: {}".format(TELEMETRY_ID, tid_header)
-            raise InvalidUsage(err, 400)
-
-        record_format_version = request.headers.get('Record-Format-Version')
-        if not record_format_version:
-            raise InvalidUsage("Record format version missing", 400)
-
-        severity = request.headers.get('Severity')
-        if not severity:
-            raise InvalidUsage("Severity missing", 400)
-
-        classification = request.headers.get('Classification')
-        if not classification:
-            raise InvalidUsage("Classification missing", 400)
-
-        machine_id = request.headers.get('Machine-Id')
-        if not machine_id:
-            raise InvalidUsage("Machine id missing", 400)
-
-        if len(machine_id) > 32:
-            raise InvalidUsage("Machine id too long", 400)
-
-        timestamp = request.headers.get('Creation-Timestamp')
-        if not timestamp:
-            raise InvalidUsage("Timestamp missing", 400)
-
-        ts_capture = int(timestamp)
-        ts_reception = time.time()
-
-        architecture = request.headers.get('Arch')
-        if not architecture:
-            raise InvalidUsage("Architecture missing", 400)
-
-        host_type = request.headers.get('Host-Type')
-        if not host_type:
-            raise InvalidUsage("Host type missing", 400)
-
-        kernel_version = request.headers.get('Kernel-Version')
-        if not kernel_version:
-            raise InvalidUsage("Kernel version missing", 400)
-
-        os_name = request.headers.get('System-Name')
-        if not os_name:
-            raise InvalidUsage("OS name missing", 400)
-
-        os_name = os_name.replace('"', '').replace("'", "")
-
-        build = request.headers.get('Build')
-        if not build:
-            raise InvalidUsage("Build missing", 400)
-
-        # It is common to see the build numbers quoted in os-release. We don't
-        # need the quotes, so strip them from the semantic value.
-        build = build.replace('"', '').replace("'", "")
-
-        # The build number is stored as a string in the database, but if this
-        # record is from a Clear Linux OS system, only accept an integer.
-        # Otherwise, loosen the restriction to the characters listed for
-        # VERSION_ID in os-release(5) in addition to the capital letters A-Z.
-        if os_name == 'clear-linux-os':
-            build_regex = re.compile(r"^[0-9]+$")
-            if not build_regex.match(build):
-                raise InvalidUsage("Clear Linux OS build version has invalid characters")
-        else:
-            build_regex = re.compile(r"^[-_a-zA-Z0-9.]+$")
-            if not build_regex.match(build):
-                raise InvalidUsage("Build version has invalid characters")
-
-        payload_format_version = request.headers.get('Payload-Format-Version')
-        if not payload_format_version:
-            raise InvalidUsage("Payload format version missing", 400)
-        if int(payload_format_version) > POSTGRES_INT_MAX:
-            raise InvalidUsage("Payload format version outside of range supported")
-
-        external = request.headers.get('X-CLR-External')
-        if external and external == "true":
-            external = True
-        else:
-            external = False
-
-        try:
-            # prefer UTF-8, if possible
-            payload = request.data.decode('utf-8')
-        except UnicodeError:
-            # fallback to Latin-1, since it accepts all byte values
-            payload = request.data.decode('latin-1')
-
-        if classification == "org.clearlinux/mce/corrected" and "THERMAL" in payload:
-            classification = "org.clearlinux/mce/thermal"
-
-        db_class = Classification.query.filter_by(classification=classification).first()
-        if db_class is None:
-            db_class = Classification(classification)
-
-        db_build = Build.query.filter_by(build=build).first()
-        if db_build is None:
-            db_build = Build(build)
-
-        db_rec = Record.create(machine_id, host_type, severity, db_class, db_build, architecture, kernel_version,
-                               record_format_version, ts_capture, ts_reception, payload_format_version, os_name,
-                               external, payload)
-
-        if is_crash_classification(classification):
-            # must pass args as bytes to uwsgi under Python 3
-            process_guilties(klass=classification.encode(), id=str(db_rec.id).encode())
-
-        resp = jsonify(db_rec.to_dict())
-        resp.status_code = 201
-        return resp
+        return collector_post_handler()
     else:
-        # print all the recorded messages so far
         return redirect("/telemetryui", code=302)
 
 
 @app.route("/api/records", methods=['GET'])
 def records_api_handler():
-    '''
+    """
     query filters for simple query:
     classification
     severity
@@ -225,65 +314,8 @@ def records_api_handler():
     server_created_after - timestamp
     server_created_before - timestamp
 
-    '''
-
-    severity = request.args.get('severity')
-    if severity and not severity.isdigit():
-        raise InvalidUsage("Severity should be a numeric value", 400)
-
-    classification = request.args.get('classification')
-    if classification and len(classification) > 140:
-        raise InvalidUsage("Classification string too long", 400)
-
-    build = request.args.get('build')
-    if build and len(build) > 256:
-        raise InvalidUsage("Build string too long", 400)
-
-    machine_id = request.args.get('machine_id')
-    if machine_id and len(machine_id) > 32:
-        raise InvalidUsage("Machine id too long", 400)
-
-    created_in_days = None
-    created_in_sec = None
-    interval_sec = None
-
-    created_in_days = request.args.get('created_in_days')
-    if created_in_days:
-        if not created_in_days.isdigit():
-            raise InvalidUsage("created_in_days should be a numeric value", 400)
-
-        created_in_days = int(created_in_days)
-
-        if int(created_in_days) < 0:
-            raise InvalidUsage("created_in_sec should not be negative", 400)
-        elif created_in_days > 30:
-            created_in_days = 30
-        interval_sec = 24 * 60 * 60 * created_in_days
-    else:
-        created_in_sec = request.args.get('created_in_sec')
-
-        if created_in_sec:
-            if not created_in_sec.isdigit():
-                raise InvalidUsage("created_in_sec should be a numeric value", 400)
-
-            interval_sec = int(created_in_sec)
-            if interval_sec < 0:
-                raise InvalidUsage("created_in_sec should not be negative", 400)
-            else:
-                max_interval_sec = 24 * 60 * 60 * 30
-                if interval_sec > max_interval_sec:
-                    interval_sec = max_interval_sec
-
-    limit = request.args.get('limit')
-    if limit is None:
-        limit = 10000
-    elif not limit.isdigit():
-        raise InvalidUsage("Limit should be a numeric value", 400)
-
-    records = Record.query_records(build, classification, severity, machine_id, limit, interval_sec)
-    record_list = [Record.to_dict(rec) for rec in records]
-
-    return jsonify(records=record_list)
+    """
+    return get_records_api_handler()
 
 
 # vi: ts=4 et sw=4 sts=4
