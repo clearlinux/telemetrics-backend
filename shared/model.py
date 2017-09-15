@@ -123,16 +123,18 @@ class Record(db.Model):
     classification_id = db.Column(db.Integer, db.ForeignKey('classification.id'))
     build_id = db.Column(db.Integer, db.ForeignKey('build.id'))
     guilty_id = db.Column(db.Integer, db.ForeignKey('guilty.id'))
+    board_name = db.Column(db.String, default='')
+    bios_version = db.Column(db.String, default='')
+    cpu_model = db.Column(db.String, default='')
     external = db.Column(db.Boolean, default=False)
 
     classification = db.relationship('Classification', backref=db.backref('records', lazy='dynamic'), lazy='joined')
     build = db.relationship('Build', backref=db.backref('records', lazy='dynamic'), lazy='joined')
     guilty = db.relationship('Guilty', backref=db.backref('records', lazy='dynamic'), lazy='joined')
 
-    def __init__(self, machine_id, host_type, severity, classification,
-                 build, architecture, kernel_version, record_format_version,
-                 ts_capture, ts_reception, payload_format_version, os_name,
-                 external, payload):
+    def __init__(self, machine_id, host_type, severity, classification, build, architecture, kernel_version,
+                 record_format_version, ts_capture, ts_reception, payload_format_version, os_name,
+                 board_name, bios_version, cpu_model, external, payload):
         self.machine_id = machine_id
         self.machine = host_type
         self.architecture = architecture
@@ -147,6 +149,10 @@ class Record(db.Model):
         self.payload_format_version = payload_format_version
         self.os_name = os_name
         self.external = external
+        self.board_name = board_name
+        self.bios_version = bios_version
+        self.cpu_model = cpu_model
+
         try:
             self.payload = payload.encode('utf-8')
         except UnicodeError:
@@ -171,6 +177,9 @@ class Record(db.Model):
             'classification': self.classification.classification,
             'record_format_version': self.record_format_version,
             'payload': self.backtrace,
+            'board_name': self.board_name,
+            'bios_version': self.bios_version,
+            'cpu_model': self.cpu_model,
         }
         return record
 
@@ -195,11 +204,11 @@ class Record(db.Model):
     @staticmethod
     def create(machine_id, host_type, severity, classification, build, architecture, kernel_version,
                record_format_version, ts_capture, ts_reception, payload_format_version, os_name,
-               external, payload):
+               board_name, bios_version, cpu_model, external, payload):
         try:
             record = Record(machine_id, host_type, severity, classification, build, architecture, kernel_version,
                             record_format_version, ts_capture, ts_reception, payload_format_version, os_name,
-                            external, payload)
+                            board_name, bios_version, cpu_model, external, payload)
             db.session.add(record)
             db.session.commit()
             return record
