@@ -145,7 +145,7 @@ def collector_post_handler():
     elif int(record_format_version) == 3:
         validate_headers(request.headers, REQUIRED_HEADERS_V3)
     else:
-        raise InvalidUsage("Record-Format-Version is invalid", 400)
+        raise InvalidUsage("Record-Format-Version value is not supported", 400)
 
     severity = request.headers.get('Severity')
     classification = request.headers.get('Classification')
