@@ -25,9 +25,41 @@ class Config(object):
     SQLALCHEMY_TRACK_MODIFICATIONS = True
     LOG_FILE = 'handler.log'
 
-    # The maximum retention time for records stored in the database, measured
-    # from the time received by the `collector` app.
-    MAX_WEEK_KEEP_RECORDS = 5
+    # When PURGE_OLD_RECORDS == True then a purging system of old records will
+    # be triggered daily. If this variable is not present, then no purging will be done.
+    # If the purging system is enabled, then the following two variables must be set
+    PURGE_OLD_RECORDS = True
+    # The maximum retention time in days for records stored in the database
+    # which do not match the filters in PURGE_FILTERED_RECORDS.
+    # Use 0 to avoid deletion of all unfiltered records.
+    MAX_DAYS_KEEP_UNFILTERED_RECORDS = 30
+    # A dictionary in the following format:
+    # {
+    #     "<field_name>": {
+    #         "<field_value>": <max_days_to_keep>,
+    #         ...
+    #         },
+    #     ...
+    # }
+    # Currently supported fields to filter:
+    # [
+    #     'severity',
+    #     'classification',
+    #     'machine_id'
+    # ]
+    # Use 0 to avoid deletion of records that matches the filter.
+    # If you do not want to filter records to delete, just set an empty dict '{}'
+    PURGE_FILTERED_RECORDS = {
+        "severity": {
+            1: 5,
+            4: 0
+        },
+        "classification": {
+            "org.clearlinux/mce/*": 0,
+            "org.clearlinux/hello/world": 1,
+            "org.clearlinux/heartbeat/ping": 1,
+        }
+    }
 
     # The Telemetry ID (TID) accepted by this `collector` app. The ID should be a
     # random UUID, generated with (for example) `uuidgen`. The default value
