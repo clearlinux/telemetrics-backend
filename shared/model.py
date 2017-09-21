@@ -123,10 +123,10 @@ class Record(db.Model):
     classification_id = db.Column(db.Integer, db.ForeignKey('classification.id'))
     build_id = db.Column(db.Integer, db.ForeignKey('build.id'))
     guilty_id = db.Column(db.Integer, db.ForeignKey('guilty.id'))
+    external = db.Column(db.Boolean, default=False)
     board_name = db.Column(db.String, default='')
     bios_version = db.Column(db.String, default='')
     cpu_model = db.Column(db.String, default='')
-    external = db.Column(db.Boolean, default=False)
 
     classification = db.relationship('Classification', backref=db.backref('records', lazy='dynamic'), lazy='joined')
     build = db.relationship('Build', backref=db.backref('records', lazy='dynamic'), lazy='joined')
