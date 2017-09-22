@@ -392,15 +392,15 @@ class Record(db.Model):
         return q.all()
 
     @staticmethod
-    def get_new_crash_records(classes=None, _id=None):
+    def get_new_crash_records(classes=None, id=None):
         q = db.session.query(Record).join(Classification)
         if not classes:
             classes = ['org.clearlinux/crash/clr']
         q = q.filter(Classification.classification.in_(classes))
         q = q.filter(Record.os_name == 'clear-linux-os')
         q = q.filter(Record.processed is False)
-        if _id:
-            q = q.filter(Record.id == _id)
+        if id:
+            q = q.filter(Record.id == id)
         return q.all()
 
     @staticmethod
