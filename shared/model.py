@@ -91,7 +91,7 @@ class Guilty(db.Model):
     @staticmethod
     def get_hidden_guilties():
         q = db.session.query(Guilty.id, Guilty.function, Guilty.module)
-        q = q.filter(Guilty.hide is True)
+        q = q.filter(Guilty.hide == True)
         q = q.order_by(Guilty.function)
         return q.all()
 
@@ -380,7 +380,7 @@ class Record(db.Model):
             classes = ['org.clearlinux/crash/clr']
         q = q.filter(Classification.classification.in_(classes))
         q = q.filter(Build.build.op('~')('^[0-9][0-9]+$'))
-        q = q.filter(Guilty.hide is False)
+        q = q.filter(Guilty.hide == False)
         q = q.group_by(Guilty.function, Guilty.module, Guilty.comment, Guilty.id, Build.build)
         q = q.order_by(desc(cast(Build.build, db.Integer)), desc('total'))
         # query for records created in the last week (~ 10 Clear builds)
@@ -398,7 +398,7 @@ class Record(db.Model):
             classes = ['org.clearlinux/crash/clr']
         q = q.filter(Classification.classification.in_(classes))
         q = q.filter(Record.os_name == 'clear-linux-os')
-        q = q.filter(Record.processed is False)
+        q = q.filter(Record.processed == False)
         if id:
             q = q.filter(Record.id == id)
         return q.all()
@@ -517,8 +517,8 @@ class Record(db.Model):
     def get_heartbeat_msgs(most_recent=None):
         # These two expressions are SQL CASE conditional expressions, later
         # used within count(distinct ...) aggregates for the query.
-        internal_expr = case([(Record.external is False, Record.machine_id), ]).label('internal_count')
-        external_expr = case([(Record.external is True, Record.machine_id), ]).label('external_count')
+        internal_expr = case([(Record.external == False, Record.machine_id), ]).label('internal_count')
+        external_expr = case([(Record.external == True, Record.machine_id), ]).label('external_count')
 
         q = db.session.query(Build.build, db.func.count(db.distinct(internal_expr)), db.func.count(db.distinct(external_expr)))
         q = q.join(Record).join(Classification)
