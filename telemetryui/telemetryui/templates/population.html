@@ -38,6 +38,11 @@
     <div style="max-width:100%; margin-bottom: 40px;">
         <canvas id="OneDay_chart" width="800" height="250"></canvas>
     </div>
+
+    <div style="max-width:100%; margin-bottom: 40px;">
+        <canvas id="ThreeDay_chart" width="800" height="250"></canvas>
+    </div>
+
 </div>
 
 
@@ -52,7 +57,8 @@
                 ["Machines per Build", " ( ", "{{chart.timestr}}", " ) "].join(""),
                 [{% for s in chart.stats %} "{{ s[0] }}", {% endfor %}],
                 [{% for s in chart.stats %} "{{ s[1] }}", {% endfor %}],
-                [{% for s in chart.stats %} "{{ s[2] }}", {% endfor %}]);
+                [{% for s in chart.stats %} "{{ s[2] }}", {% endfor %}],
+                [{% for s in chart.stats %} "{{ s[3] }}", {% endfor %}]);
             {%- endif %}
         {%- endfor %}
 

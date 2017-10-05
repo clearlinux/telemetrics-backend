@@ -573,7 +573,8 @@ def population():
     charts = [{'id': 'Overall', 'time': None, 'timestr': 'Overall'},
               {'id': 'TwoWeeks', 'time': 14, 'timestr': 'Past Two Weeks'},
               {'id': 'OneWeek', 'time': 7, 'timestr': 'Past Week'},
-              {'id': 'OneDay', 'time': 1, 'timestr': 'Past Day'}]
+              {'id': 'OneDay', 'time': 1, 'timestr': 'Past Day'},
+              {'id': 'ThreeDay', 'time': 3, 'timestr': 'Three Days'}]
 
     for c in charts:
         msgs = Record.get_heartbeat_msgs(c['time'])
