@@ -250,7 +250,7 @@ class Record(db.Model):
 
     @staticmethod
     def filter_records(build, classification, severity, machine_id=None, os_name=None, limit=None, from_date=None,
-                       to_date=None, payload=None, not_payload=None):
+                       to_date=None, payload=None, not_payload=None, data_source=None):
         records = Record.query
         if build is not None:
             records = records.join(Record.build).filter_by(build=build)
@@ -275,6 +275,11 @@ class Record(db.Model):
             records = records.filter(Record.backtrace.op('~')(payload))
         if not_payload is not None:
             records = records.filter(~Record.backtrace.op('~')(not_payload))
+        if data_source is not None:
+            if data_source == "external":
+                records = records.filter(Record.external == True)
+            elif data_source == "internal":
+                records = records.filter(Record.external == False)
 
         records = records.order_by(Record.id.desc())
 

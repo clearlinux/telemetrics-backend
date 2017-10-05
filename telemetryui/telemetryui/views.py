@@ -62,10 +62,11 @@ def records(page=1):
     cl = session.get('severity')
 
     os_map = Record.get_os_map()
-    form.os_name.choices = [(n, n) for n in os_map.keys()]
-    form.os_name.choices.insert(0, ("All", "All"))
+    form.os_name.choices = [("All", "All")] + [(n, n) for n in os_map.keys()]
 
     form.machine_id.default = ""
+
+    form.data_source.choices = [("All", "All")] + [('external', 'External'), ('internal', 'Internal')]
 
     if request.method == 'POST':
         if form.validate_on_submit() is False:
@@ -89,6 +90,7 @@ def records(page=1):
             not_payload = request.form.get('not_payload')
             from_date = request.form.get('from_date')
             to_date = request.form.get('to_date')
+            data_source = request.form.get('data_source')
 
             redirect_args = {
                 "page_size": page_size if page_size != "" else None,
@@ -101,6 +103,7 @@ def records(page=1):
                 "not_payload": not_payload if not_payload != "" else None,
                 "from_date": from_date if from_date != "" else None,
                 "to_date": to_date if to_date != "" else None,
+                "data_source": data_source if data_source != "All" else None,
             }
             dest = 'records'
 
@@ -128,6 +131,7 @@ def records(page=1):
         not_payload = request.args.get('not_payload')
         from_date = request.args.get('from_date')
         to_date = request.args.get('to_date')
+        data_source = request.args.get('data_source')
 
         if classification is not None:
             form.classification.default = classification
@@ -147,6 +151,8 @@ def records(page=1):
             form.from_date.default = datetime.datetime.strptime(from_date, "%Y-%m-%d")
         if to_date is not None:
             form.to_date.default = datetime.datetime.strptime(to_date, "%Y-%m-%d")
+        if data_source is not None:
+            form.data_source.default = data_source
 
         form.process()
 
@@ -154,7 +160,9 @@ def records(page=1):
             page_size = RECORDS_PER_PAGE
         elif int(page_size) > MAX_RECORDS_PER_PAGE:
             page_size = MAX_RECORDS_PER_PAGE
-        out_records = Record.filter_records(build, classification, severity, machine_id, os_name=os_name, payload=payload, not_payload=not_payload, from_date=from_date, to_date=to_date).paginate(page, int(page_size), False)
+        out_records = Record.filter_records(build, classification, severity, machine_id, os_name=os_name,
+                                            payload=payload, not_payload=not_payload, data_source=data_source,
+                                            from_date=from_date, to_date=to_date).paginate(page, int(page_size), False)
         return render_template('records.html', records=out_records, form=form, os_map=json.dumps(os_map))
 
 
