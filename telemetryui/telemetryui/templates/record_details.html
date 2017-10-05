@@ -41,13 +41,13 @@
     <dd>{{ record.architecture }}</dd>
 
     <dt>Board Name</dt>
-    <dd>{{ record.board_name }}</dd>
+    <dd>{{ record.board_name if record.board_name else 'N/A'}}</dd>
 
     <dt>BIOS Version</dt>
-    <dd>{{ record.bios_version }}</dd>
+    <dd>{{ record.bios_version if record.bios_version else 'N/A'}}</dd>
 
     <dt>CPU Model</dt>
-    <dd>{{ record.cpu_model }}</dd>
+    <dd>{{ record.cpu_model if record.cpu_model else 'N/A'}}</dd>
 
     <dt>Record Time</dt>
     <dd>{{ record.tsp|local_datetime_since }}</dd>
