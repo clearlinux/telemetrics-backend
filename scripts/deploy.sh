@@ -17,6 +17,7 @@
 
 REMOTE_APP_DIR="/var/www/telemetry"
 DEBIAN_PKGS="build-essential python3 python3-dev python3-pip python3-virtualenv libpq-dev nginx git"
+REDHAT_PKGS="gcc gcc-c++ make python34 python34-devel python34-pip python34-virtualenv postgresql-devel postgresql-server postgresql-contrib nginx git policycoreutils-python"
 CLR_BUNDLES="application-server database-basic database-basic-dev python-basic os-clr-on-clr os-core-dev web-server-basic"
 DB_PASSWORD=""
 NGINX_USER=""
@@ -27,6 +28,7 @@ TELEMETRYUI_INI="telemetryui_uwsgi.ini"
 SPOOL_DIR="uwsgi-spool"
 APT_GET_INSTALL="DEBIAN_FRONTEND=noninteractive apt-get install -y -o Dpkg::=\"--force-confnew\""
 APT_GET_REMOVE="DEBIAN_FRONTEND=noninteractive apt-get remove -y -o Dpkg::=\"--force-confnew\""
+YUM_INSTALL="yum install -y"
 
 usage() {
   echo "Usage: $0 -H DOMAIN [OPTIONS]"
@@ -34,7 +36,7 @@ usage() {
   echo "Deploy snapshot of the telemetrics-backend"
   echo -en "\n"
   echo -e "  -a\tPerform specified action (deploy, install, migrate, resetdb, restart, uninstall; default: deploy)"
-  echo -e "  -d\tDistro to deploy to (ubuntu, or clr; default: ubuntu)"
+  echo -e "  -d\tDistro to deploy to (ubuntu, centos or clr; default: ubuntu)"
   echo -e "  -h\tPrint these options"
   echo -e "  -H\tSet domain for deployment (only accepted value is \"localhost\" for now)"
   echo -e "  -r\tSet repo location to deploy from (default: https://github.com/clearlinux/telemetrics-backend)"
@@ -91,6 +93,11 @@ while getopts "a:d:hH:r:s:t:u" arg; do
           DISTRO="$OPTARG"
           NGINX_USER="httpd"
           NGINX_GROUP="httpd"
+          ;;
+        centos)
+          DISTRO="$OPTARG"
+          NGINX_USER="nginx"
+          NGINX_GROUP="nginx"
           ;;
         *)
           error "invalid argument for -d ($OPTARG)"
@@ -201,6 +208,14 @@ _install_clr_reqs() {
   sudo https_proxy=$https_proxy pip3 install uwsgitop
 }
 
+_install_centos_reqs() {
+  set_proxy
+  sudo https_proxy=$https_proxy $YUM_INSTALL epel-release
+  sudo https_proxy=$https_proxy $YUM_INSTALL $REDHAT_PKGS
+  sudo https_proxy=$https_proxy pip3 install uwsgitop
+  sudo ln /usr/bin/virtualenv-3 /usr/bin/virtualenv
+}
+
 _write_requirements() {
     cat > $1 << EOF
 alembic==0.9.5
@@ -237,6 +252,13 @@ _install_pip_pkgs_clr() {
   sudo rm -f "$log"
   # the latest psycopg2 binary package is incompatible with the glibc 2.26 on Clear Linux
   sudo bash -c "https_proxy=$https_proxy source venv/bin/activate && https_proxy=$https_proxy pip3 --log $log install --no-binary psycopg2 -r $reqs"
+}
+
+_install_pip_pkgs_centos() {
+  local log=$REMOTE_APP_DIR/install.log
+  local reqs=$1
+  sudo rm -f "$log"
+  sudo bash -c "https_proxy=$https_proxy source venv/bin/activate && https_proxy=$https_proxy pip3 --log $log install -r $reqs"
 }
 
 _install_virtual_env() {
@@ -278,9 +300,15 @@ _postinstall_postgres_clr() {
   sudo chown postgres:postgres /var/lib/pgsql/.profile
 }
 
+_postinstall_postgres_centos() {
+  sudo postgresql-setup initdb
+  sudo sed -i 's/ident$/md5/' /var/lib/pgsql/data/pg_hba.conf
+}
+
 _start_postgres() {
   sudo systemctl enable postgresql
   sudo systemctl start postgresql
+  sudo systemctl restart postgresql
 }
 
 _install_postgres_ubuntu() {
@@ -370,6 +398,14 @@ _config_nginx_clr() {
   sudo systemctl enable nginx
 }
 
+_config_nginx_centos() {
+  sudo mkdir -pv /etc/nginx/conf.d
+  sudo cp -av $scripts_path/nginx.conf /etc/nginx/nginx.conf
+  sudo ln -sf $REMOTE_APP_DIR/sites_nginx.conf /etc/nginx/conf.d/
+  sudo chcon -t httpd_config_t $REMOTE_APP_DIR/sites_nginx.conf
+  sudo systemctl enable nginx
+}
+
 _config_uwsgi_ubuntu() {
   sudo cp -af $scripts_path/uwsgi.conf /etc/init/
   sudo cp -af $scripts_path/uwsgi.service /lib/systemd/system/
@@ -379,6 +415,17 @@ _config_uwsgi_clr() {
   sudo mkdir -pv /etc/systemd/system
   sudo cp -afv $scripts_path/uwsgi.service /etc/systemd/system/
   sudo systemctl daemon-reload
+}
+
+_config_uwsgi_centos() {
+  sudo mkdir -pv /etc/systemd/system
+  sudo cp -afv $scripts_path/uwsgi.service /etc/systemd/system/
+  sudo systemctl daemon-reload
+  cd $REMOTE_APP_DIR
+  sudo cp -afv $scripts_path/nginx-uwsgi.te .
+  sudo checkmodule -M -m -o nginx-uwsgi.mod nginx-uwsgi.te
+  sudo semodule_package -o nginx-uwsgi.pp -m nginx-uwsgi.mod
+  sudo semodule -i nginx-uwsgi.pp
 }
 
 _generate_key() {
