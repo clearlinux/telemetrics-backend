@@ -239,26 +239,16 @@ WTForms==2.1
 EOF
 }
 
-_install_pip_pkgs_ubuntu() {
+_install_pip_pkgs() {
   local log=$REMOTE_APP_DIR/install.log
   local reqs=$1
   sudo rm -f "$log"
-  sudo bash -c "https_proxy=$https_proxy source venv/bin/activate && https_proxy=$https_proxy pip3 --log $log install -r $reqs"
-}
-
-_install_pip_pkgs_clr() {
-  local log=$REMOTE_APP_DIR/install.log
-  local reqs=$1
-  sudo rm -f "$log"
-  # the latest psycopg2 binary package is incompatible with the glibc 2.26 on Clear Linux
-  sudo bash -c "https_proxy=$https_proxy source venv/bin/activate && https_proxy=$https_proxy pip3 --log $log install --no-binary psycopg2 -r $reqs"
-}
-
-_install_pip_pkgs_centos() {
-  local log=$REMOTE_APP_DIR/install.log
-  local reqs=$1
-  sudo rm -f "$log"
-  sudo bash -c "https_proxy=$https_proxy source venv/bin/activate && https_proxy=$https_proxy pip3 --log $log install -r $reqs"
+  if [ $DISTRO == "clr" ]; then
+    # the latest psycopg2 binary package is incompatible with the glibc 2.26 on Clear Linux
+    sudo bash -c "https_proxy=$https_proxy source venv/bin/activate && https_proxy=$https_proxy pip3 --log $log install --no-binary psycopg2 -r $reqs"
+  else
+    sudo bash -c "https_proxy=$https_proxy source venv/bin/activate && https_proxy=$https_proxy pip3 --log $log install -r $reqs"
+  fi
 }
 
 _install_virtual_env() {
@@ -273,7 +263,7 @@ _install_virtual_env() {
        local REQS=$(mktemp /tmp/requirements.txt.XXXXXX)
        _write_requirements $REQS
     fi
-    _install_pip_pkgs_${DISTRO} $REQS
+    _install_pip_pkgs $REQS
     sudo chown -R $NGINX_USER:$NGINX_GROUP $REMOTE_APP_DIR
   )
   sudo mkdir -pv /var/log/uwsgi
@@ -307,7 +297,6 @@ _postinstall_postgres_centos() {
 
 _start_postgres() {
   sudo systemctl enable postgresql
-  sudo systemctl start postgresql
   sudo systemctl restart postgresql
 }
 
