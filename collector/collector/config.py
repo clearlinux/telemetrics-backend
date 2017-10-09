@@ -37,7 +37,6 @@ class Config(object):
     PURGE_FILTERED_RECORDS = {
         "classification": {
             "org.clearlinux/hello/world": 1,
-            "org.clearlinux/heartbeat/ping": 7,
         }
     }
 
