@@ -316,9 +316,10 @@ class Record(db.Model):
 
     @staticmethod
     def get_recordcnts_by_classification():
-        q = db.session.query(Classification.classification, db.func.count(Record.id))
+        q = db.session.query(Classification.classification, db.func.count(Record.id).label('total'))
         q = q.join(Record.classification)
         q = q.group_by(Classification.classification)
+        q = q.order_by(desc('total'))
         return q.all()
 
     @staticmethod
@@ -344,8 +345,10 @@ class Record(db.Model):
 
     @staticmethod
     def get_recordcnts_by_machine_type():
-        q = db.session.query(Record.machine, db.func.count(Record.id)).group_by(Record.machine).all()
-        return q
+        q = db.session.query(Record.machine, db.func.count(Record.id).label('total'))
+        q = q.group_by(Record.machine)
+        q = q.order_by(desc('total'))
+        return q.all()
 
     @staticmethod
     def get_recordcnts_by_severity():
