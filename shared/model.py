@@ -18,7 +18,6 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.sql.expression import cast
 from sqlalchemy.sql.expression import desc
 from sqlalchemy.sql.expression import case
-from sqlalchemy.sql import text
 from time import time, localtime, strftime, mktime, strptime, gmtime
 from distutils.version import LooseVersion
 
@@ -26,7 +25,8 @@ from . import app
 
 db = SQLAlchemy(app)
 
-MAX_WEEK_KEEP_RECORDS = app.config.get("MAX_WEEK_KEEP_RECORDS", 5)
+MAX_DAYS_KEEP_UNFILTERED_RECORDS = app.config.get("MAX_DAYS_KEEP_UNFILTERED_RECORDS", 35)
+PURGE_FILTERED_RECORDS = app.config.get("PURGE_FILTERED_RECORDS", {})
 
 
 class Classification(db.Model):
@@ -291,14 +291,55 @@ class Record(db.Model):
     @staticmethod
     def delete_records():
         try:
-            sec_weeks = MAX_WEEK_KEEP_RECORDS * 7 * 24 * 60 * 60
-            current_time = time()
-            time_weeks_ago = current_time - sec_weeks
-            q = db.session.query(Record).filter(Record.tsp_server < time_weeks_ago)
-            count = q.delete(synchronize_session=False)
+            for field in PURGE_FILTERED_RECORDS.keys():
+                if field == 'severity':
+                    for severity in PURGE_FILTERED_RECORDS[field].keys():
+                        if PURGE_FILTERED_RECORDS[field][severity]:
+                            age = time() - PURGE_FILTERED_RECORDS[field][severity] * 24 * 60 * 60
+                            q = db.session.query(Record)
+                            q = q.filter(Record.severity == severity)
+                            q = q.filter(Record.tsp_server < age)
+                            count = q.delete(synchronize_session=False)
+                            print("Deleted {} {} records".format(count, severity))
+                elif field == 'classification':
+                    for classification in PURGE_FILTERED_RECORDS[field].keys():
+                        if PURGE_FILTERED_RECORDS[field][classification]:
+                            age = time() - PURGE_FILTERED_RECORDS[field][classification] * 24 * 60 * 60
+                            q = db.session.query(Record.id).join(Record.classification)
+                            q = q.filter(Classification.classification.like(classification))
+                            q = q.filter(Record.tsp_server < age)
+                            count = db.session.query(Record).filter(Record.id.in_(q)).delete(synchronize_session=False)
+                            print("Deleted {} {} records".format(count, classification))
+                elif field == 'machine_id':
+                    for machine_id in PURGE_FILTERED_RECORDS[field].keys():
+                        if PURGE_FILTERED_RECORDS[field][machine_id]:
+                            age = time() - PURGE_FILTERED_RECORDS[field][machine_id] * 24 * 60 * 60
+                            q = db.session.query(Record)
+                            q = q.filter(Record.machine_id == machine_id)
+                            q = q.filter(Record.tsp_server < age)
+                            count = q.delete(synchronize_session=False)
+                            print("Deleted {} {} records".format(count, machine_id))
+            if MAX_DAYS_KEEP_UNFILTERED_RECORDS:
+                unfiltered_age = time() - MAX_DAYS_KEEP_UNFILTERED_RECORDS * 24 * 60 * 60
+                q = db.session.query(Record.id)
+                for field in PURGE_FILTERED_RECORDS.keys():
+                    if field == 'severity':
+                        for severity in PURGE_FILTERED_RECORDS[field].keys():
+                            q = q.filter(Record.severity != severity)
+                    elif field == 'classification':
+                        q = q.join(Record.classification)
+                        for classification in PURGE_FILTERED_RECORDS[field].keys():
+                            q = q.filter(~Classification.classification.like(classification))
+                    elif field == 'machine_id':
+                        for machine_id in PURGE_FILTERED_RECORDS[field].keys():
+                            q = q.filter(Record.machine_id != machine_id)
+                q = q.filter(Record.tsp_server < unfiltered_age)
+                count = db.session.query(Record).filter(Record.id.in_(q)).delete(synchronize_session=False)
+                print("Deleted {} old records".format(count))
             db.session.commit()
-            print("Deleted {} old records".format(count))
-        except:
+        except Exception as e:
+            app.logger.error("Record purging failed")
+            app.logger.error(e)
             db.session.rollback()
 
     @staticmethod
@@ -615,6 +656,42 @@ class GuiltyBlacklist(db.Model):
         except:
             db.session.rollback()
             raise
+
+
+class AppModel(db.Model):
+    """
+    Generic Object with save and delete methods
+    to be use byt all of the models in this app
+    """
+    __abstract__ = True
+
+    def save(self):
+        try:
+            db.session.add(self)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+
+    def delete(self, **kwargs):
+        q = db.session.query(self)
+        q = q.filter_by(**kwargs)
+        entry = q.first()
+        db.session.delete(entry)
+        db.session.commit()
+
+
+class Attachment(AppModel):
+    __tablename__ = "record_attachments"
+    id = db.Column(db.Integer, primary_key=True)
+    record_id = db.Column(db.Integer, db.ForeignKey('records.id'))
+    file_path = db.Column(db.String, unique=True, nullable=False)
+    mime_type = db.Column(db.String, default='')
+
+    def __init__(self, **kwargs):
+        self.record_id = kwargs.get('record_id', None)
+        self.file_path = kwargs.get('file_path', None)
+        self.mime_type = kwargs.get('mime_type', None)
 
 
 # vi: ts=4 et sw=4 sts=4

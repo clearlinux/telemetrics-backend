@@ -33,10 +33,31 @@ class Config(object):
     # which do not match the filters in PURGE_FILTERED_RECORDS.
     # Use 0 to avoid deletion of all unfiltered records.
     MAX_DAYS_KEEP_UNFILTERED_RECORDS = 35
-    # See config_example.py for details about PURGE_FILTERED_RECORDS
+    # A dictionary in the following format:
+    # {
+    #     "<field_name>": {
+    #         "<field_value>": <max_days_to_keep>,
+    #         ...
+    #         },
+    #     ...
+    # }
+    # Currently supported fields to filter:
+    # [
+    #     'severity',
+    #     'classification',
+    #     'machine_id'
+    # ]
+    # Use 0 to avoid deletion of records that matches the filter.
+    # If you do not want to filter records to delete, just set an empty dict '{}'
     PURGE_FILTERED_RECORDS = {
+        "severity": {
+            1: 5,
+            4: 0
+        },
         "classification": {
+            "org.clearlinux/mce/*": 0,
             "org.clearlinux/hello/world": 1,
+            "org.clearlinux/heartbeat/ping": 1,
         }
     }
 
@@ -45,9 +66,6 @@ class Config(object):
     # set here is used for records from the Clear Linux OS for Intel
     # Architecture.
     TELEMETRY_ID = "6907c830-eed9-4ce9-81ae-76daf8d88f0f"
-
-    # Path for file attachments
-    ATTACHMENT_QUARANTINE_FOLDER = '/home/attachments/'
 
 
 class Testing(Config):

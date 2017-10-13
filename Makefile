@@ -17,17 +17,18 @@ release:
 	git tag -a -m "Release $(VERSION)" v$(VERSION); \
 	printf "\nNew release $(VERSION) tagged!\n\n"
 
-start-collector:
+run-collector:
 	echo $(WARNING)
 	FLASK_APP=collector/collector/report_handler.py flask run --host $(HOST) ${PORT}
 
-start-telemetryui:
+run-telemetryui:
 	echo $(WARNING)
 	FLASK_APP=telemetryui/telemetryui/views.py flask run --host $(HOST) ${PORT}
 
 run-tests:
 	PYTHONPATH=/$(shell pwd)/collector python3 collector/collector/tests/headers.py
-	PYTHONPATH=/$(shell pwd)/collector python3 collector/collector/tests/api.py	
+	PYTHONPATH=/$(shell pwd)/collector python3 collector/collector/tests/payload.py
+	PYTHONPATH=/$(shell pwd)/collector python3 collector/collector/tests/api.py
 
 tag-production:
 	@TODAY=`date "+%F-%H%M%S"`; \

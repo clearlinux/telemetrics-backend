@@ -15,100 +15,27 @@
 #
 
 import unittest
-from collector import app, db
-from flask import current_app
 import json
-
-classification = 'classification'
-severity = 'severity'
-kernel_version = 'kernel_version'
-record_version = 'record_format_version'
-machine_id = 'machine_id'
-host_type = 'host_type'
-arch = 'arch'
-build = 'build'
-timestamp = 'creation_timestamp'
-tid = 'X-Telemetry-Tid'
-board_name = 'Board-Name'
-cpu_model = 'Cpu-Model'
-bios_version = 'Bios-Version'
-system_name = 'System-Name'
-payload_version = 'Payload-Format-Version'
-
-REQUIRED_HEADERS_V1 = (
-    'Arch',
-    'Build',
-    'Creation-Timestamp',
-    'Classification',
-    'Host-Type',
-    'Kernel-Version',
-    'Machine-Id',
-    'Severity',
-    'Record-Format-Version',
-)
-
-
-def get_record_v1():
-    return {
-        arch: 'x86_64',
-        build: '550',
-        timestamp: 2752515,
-        classification: 'test/invalid',
-        host_type: 'LenovoT20',
-        kernel_version: '3.16',
-        machine_id: '1234',
-        severity: 2,
-        record_version: 1,
-    }
-
-
-def get_record_v2():
-    v2 = get_record_v1()
-    v2.update({
-        record_version: 2,
-        tid: '6907c830-eed9-4ce9-81ae-76daf8d88f0f',
-        system_name: 'clear-linux-os',
-        payload_version: 1
-    })
-    return v2
-
-
-def get_record_v3():
-    v3 = get_record_v2()
-    v3.update({
-        record_version: 3,
-        board_name: 'D54250WYK|Intel Corporation',
-        cpu_model: 'Intel(R) Core(TM) i5-4250U CPU @ 1.30GHz',
-        bios_version: 'WYLPT10H.86A.0041.2015.0720.1108',
-
-    })
-    return v3
-
-
-class RecordTestCases(unittest.TestCase):
-    """ Generic object for telemetry record tests """
-
-    def setUp(self):
-        app.testing = True
-        app.config.from_object('config_local.Testing')
-        app.debug = False
-        self.app_context = app.app_context()
-        self.app_context.push()
-        db.init_app(current_app)
-        db.create_all()
-        self.client = app.test_client()
-
-    def tearDown(self):
-        db.session.remove()
-        db.drop_all()
-        self.app_context.pop()
-
-    def missing_header(self, header, header_name):
-        headers = self.get_version_records()
-        del headers[header_name]
-        response = self.client.post('/', headers=headers, data='test')
-        self.assertTrue(response.status_code == 400)
-        self.assertTrue(header in response.data.decode('utf-8'))
+from collector.tests.testcase_base import (
+    RecordTestCases,
+    classification,
+    severity,
+    kernel_version,
+    record_version,
+    machine_id,
+    host_type,
+    arch,
+    build,
+    timestamp,
+    tid,
+    board_name,
+    cpu_model,
+    bios_version,
+    system_name,
+    payload_version,
+    get_record_v1,
+    get_record_v2,
+    get_record_v3,)
 
 
 class TestHandlerRecordV2(RecordTestCases):
@@ -224,9 +151,7 @@ class TestHandlerRecordV3(RecordTestCases):
         self.missing_header('Bios-Version', bios_version)
 
 
-if __name__ == '__main__' and __package__ is None:
-    from os import sys, path
-    sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
+if __name__ == '__main__':
     unittest.main()
 
 
