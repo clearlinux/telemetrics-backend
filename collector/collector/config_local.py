@@ -31,15 +31,10 @@ class Config(object):
     SQLALCHEMY_TRACK_MODIFICATIONS = True
     LOG_FILE = 'handler.log'
 
-    # The maximum retention time in days for records stored in the database
-    # which do not match the filters in PURGE_FILTERED_RECORDS.
-    # Use 0 to avoid deletion of all unfiltered records.
-    MAX_DAYS_KEEP_UNFILTERED_RECORDS = 30
-
     # Path to file attachments
     ATTACHMENT_QUARANTINE_FOLDER = '/tmp/attachments/'
 
-
+    
 class Testing(Config):
     TESTING = True
 
