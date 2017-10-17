@@ -1,0 +1,11 @@
+language: python
+python:
+    3.5.2
+install:
+    pip3 install -r requirements.txt
+script:
+    make run-tests
+services:
+    postgresql
+before_script:
+    psql -c 'create database testdb;' -U postgres
