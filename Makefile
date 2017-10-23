@@ -45,6 +45,8 @@ run-tests:
 	PYTHONPATH=/$(shell pwd)/collector python3 collector/collector/tests/headers.py
 	PYTHONPATH=/$(shell pwd)/collector python3 collector/collector/tests/api.py	
 	PYTHONPATH=/$(shell pwd)/collector python3 collector/collector/tests/payload.py
+	PYTHONPATH=/$(shell pwd)/collector python3 collector/collector/tests/purge.py
+	PYTHONPATH=/$(shell pwd)/collector python3 collector/collector/tests/models.py
 
 tag-production:
 	@TODAY=`date "+%F-%H%M%S"`; \
