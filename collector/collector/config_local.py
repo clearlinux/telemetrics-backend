@@ -31,6 +31,10 @@ class Config(object):
     SQLALCHEMY_TRACK_MODIFICATIONS = True
     LOG_FILE = 'handler.log'
 
+    # The maximum retention time for records stored in the database, measured
+    # from the time received by the `collector` app.
+    MAX_WEEK_KEEP_RECORDS = 5
+
 
 class Testing(Config):
     TESTING = True

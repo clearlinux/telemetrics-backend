@@ -21,15 +21,12 @@ try:
     import uwsgi
     from uwsgidecorators import cron
 
-    PURGE_OLD_RECORDS = app.config.get("PURGE_OLD_RECORDS", True)
-
     # Runs cron job at 4:30 every day
     @cron(30, 4, -1, -1, -1, target='spooler')
     def purge_task(signum):
-        if PURGE_OLD_RECORDS:
-            app.logger.info("Running cron job for purging records")
-            with app.app_context():
-                Record.delete_records()
+        app.logger.info("Running cron job for purging records")
+        with app.app_context():
+            Record.delete_records()
 
 except ImportError:
         app.logger.info("Import error for uwsgi")

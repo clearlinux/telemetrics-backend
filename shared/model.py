@@ -26,8 +26,7 @@ from . import app
 
 db = SQLAlchemy(app)
 
-MAX_DAYS_KEEP_UNFILTERED_RECORDS = app.config.get("MAX_DAYS_KEEP_UNFILTERED_RECORDS", 35)
-PURGE_FILTERED_RECORDS = app.config.get("PURGE_FILTERED_RECORDS", {})
+MAX_WEEK_KEEP_RECORDS = app.config.get("MAX_WEEK_KEEP_RECORDS", 5)
 
 
 class Classification(db.Model):
@@ -292,39 +291,14 @@ class Record(db.Model):
     @staticmethod
     def delete_records():
         try:
-            def purge_field(field):
-                for name in PURGE_FILTERED_RECORDS[field].keys():
-                    if PURGE_FILTERED_RECORDS[field][name]:
-                        age = time() - PURGE_FILTERED_RECORDS[field][name] * 24 * 60 * 60
-                        q = db.session.query(Record)
-                        if field == 'classification':
-                            q = q.join(Record.classification)
-                            q = q.filter(Classification.classification.like(name))
-                        else:
-                            q = q.filter(getattr(Record, field) == name)
-                        q = q.filter(Record.tsp_server < age)
-                        count = db.session.query(Record).filter(Record.id.in_(q)).delete(synchronize_session=False)
-                        print("Deleted {} {} records".format(count, name))
-            for field in PURGE_FILTERED_RECORDS.keys():
-                purge_field(field)
-            if MAX_DAYS_KEEP_UNFILTERED_RECORDS:
-                unfiltered_age = time() - MAX_DAYS_KEEP_UNFILTERED_RECORDS * 24 * 60 * 60
-                q = db.session.query(Record.id)
-                for field in PURGE_FILTERED_RECORDS.keys():
-                    if field == 'classification':
-                        q = q.join(Record.classification)
-                        for classification in PURGE_FILTERED_RECORDS[field].keys():
-                            q = q.filter(~Classification.classification.like(classification))
-                    else:
-                        for name in PURGE_FILTERED_RECORDS[field].keys():
-                            q = q.filter(getattr(Record, field) != name)
-                q = q.filter(Record.tsp_server < unfiltered_age)
-                count = db.session.query(Record).filter(Record.id.in_(q)).delete(synchronize_session=False)
-                print("Deleted {} old records".format(count))
+            sec_weeks = MAX_WEEK_KEEP_RECORDS * 7 * 24 * 60 * 60
+            current_time = time()
+            time_weeks_ago = current_time - sec_weeks
+            q = db.session.query(Record).filter(Record.tsp_server < time_weeks_ago)
+            count = q.delete(synchronize_session=False)
             db.session.commit()
-        except Exception as e:
-            app.logger.error("Record purging failed")
-            app.logger.error(e)
+            print("Deleted {} old records".format(count))
+        except:
             db.session.rollback()
 
     @staticmethod
