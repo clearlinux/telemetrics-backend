@@ -617,4 +617,40 @@ class GuiltyBlacklist(db.Model):
             raise
 
 
+class AppModel(db.Model):
+    """
+    Generic Object with save and delete methods
+    to be use byt all of the models in this app
+    """
+    __abstract__ = True
+
+    def save(self):
+        try:
+            db.session.add(self)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+
+    def delete(self, **kwargs):
+        q = db.session.query(self)
+        q = q.filter_by(**kwargs)
+        entry = q.first()
+        db.session.delete(entry)
+        db.session.commit()
+
+
+class Attachment(AppModel):
+    __tablename__ = "record_attachments"
+    id = db.Column(db.Integer, primary_key=True)
+    record_id = db.Column(db.Integer, db.ForeignKey('records.id'))
+    file_path = db.Column(db.String, unique=True, nullable=False)
+    mime_type = db.Column(db.String, default='')
+
+    def __init__(self, **kwargs):
+        self.record_id = kwargs.get('record_id', None)
+        self.file_path = kwargs.get('file_path', None)
+        self.mime_type = kwargs.get('mime_type', None)
+
+
 # vi: ts=4 et sw=4 sts=4

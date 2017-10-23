@@ -35,6 +35,9 @@ class Config(object):
     # from the time received by the `collector` app.
     MAX_WEEK_KEEP_RECORDS = 5
 
+    # Upload files path
+    ATTACHMENT_QUARANTINE_FOLDER = '/tmp/clrtelemetry.attachments/'
+
 
 class Testing(Config):
     TESTING = True

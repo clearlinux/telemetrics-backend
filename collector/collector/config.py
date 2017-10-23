@@ -35,6 +35,9 @@ class Config(object):
     # Architecture.
     TELEMETRY_ID = "6907c830-eed9-4ce9-81ae-76daf8d88f0f"
 
+    # Upload files path
+    ATTACHMENT_QUARANTINE_FOLDER = '/tmp/clrtelemetry.attachments/'
+
 
 class Testing(Config):
     TESTING = True

@@ -14,15 +14,18 @@
 # limitations under the License.
 #
 
+import os
 import re
 import time
 import datetime
+import tempfile
 from flask import request
 from flask import jsonify
 from flask import redirect
 from .model import (
-    Classification,
-    Build)
+    Build,
+    Attachment,
+    Classification,)
 from .crash import (
     process_guilties,
     is_crash_classification)
@@ -41,7 +44,8 @@ MAX_INTERVAL_SEC = 24 * 60 * 60 * 30    # 30 days in seconds
 
 # see config.py for the meaning of this value
 TELEMETRY_ID = app.config.get("TELEMETRY_ID", "6907c830-eed9-4ce9-81ae-76daf8d88f0f")
-
+ATTACHMENT_QUARANTINE_FOLDER = app.config.get("ATTACHMENT_QUARANTINE_FOLDER")
+BINARY_ATTACHMENT = (200, 300,)
 
 REQUIRED_HEADERS_V1 = (
     'Arch',
@@ -68,6 +72,14 @@ REQUIRED_HEADERS_V3 = REQUIRED_HEADERS_V2 + (
 )
 
 VALID_RECORD_FORMAT_VERSIONS = [1, 2, 3]
+
+
+# Create temp file if not existent
+def check_tmp_folder():
+    if os.path.exists(ATTACHMENT_QUARANTINE_FOLDER) is False:
+        os.makedirs(ATTACHMENT_QUARANTINE_FOLDER)
+
+check_tmp_folder()
 
 
 class InvalidUsage(Exception):
@@ -110,6 +122,35 @@ def before_request():
     )
 
 
+def process_multipart_payload():
+    file_path = tempfile.NamedTemporaryFile(dir=ATTACHMENT_QUARANTINE_FOLDER, prefix="{}".format(time.time())).name
+    file_handler = request.files.get('payload', None)
+    if file_handler is not None:
+        file_handler.save(file_path)
+        return file_path, file_handler.mimetype
+    return None, request.content_type[:19]
+
+
+def process_text_payload():
+    try:
+        # prefer UTF-8, if possible
+        payload = request.data.decode('utf-8')
+    except UnicodeError:
+        # fallback to Latin-1, since it accepts all byte values
+        payload = request.data.decode('latin-1')
+
+    return payload, request.content_type
+
+
+def process_payload():
+    if 'application/text' in request.content_type:
+        return process_text_payload()
+    elif 'multipart/form-data' in request.content_type[:19]:
+        return process_multipart_payload()
+    else:
+        return process_text_payload()
+
+
 def validate_headers(headers, required_headers):
     req_headers = dict(headers)
     req_headers_keys = req_headers.keys()
@@ -119,6 +160,18 @@ def validate_headers(headers, required_headers):
         if not request.headers.get(header):
             raise InvalidUsage("Request header {} is blank".format(header), 400)
     return True
+
+
+def validate_req_version_headers(record_format_version):
+    version_headers = {
+        '1': REQUIRED_HEADERS_V1,
+        '2': REQUIRED_HEADERS_V2,
+        '3': REQUIRED_HEADERS_V3
+    }
+    if record_format_version not in version_headers.keys():
+        raise InvalidUsage("Record-Format-Version value {} is not supported".format(record_format_version), 400)
+    required_headers = version_headers.get(record_format_version)
+    return validate_headers(request.headers, required_headers)
 
 
 def collector_post_handler():
@@ -138,14 +191,7 @@ def collector_post_handler():
         raise InvalidUsage("Record-Format-Version is invalid", 400)
 
     # Validate required headers based on Record Version
-    if int(record_format_version) == 1:
-        validate_headers(request.headers, REQUIRED_HEADERS_V1)
-    elif int(record_format_version) == 2:
-        validate_headers(request.headers, REQUIRED_HEADERS_V2)
-    elif int(record_format_version) == 3:
-        validate_headers(request.headers, REQUIRED_HEADERS_V3)
-    else:
-        raise InvalidUsage("Record-Format-Version value is not supported", 400)
+    validate_req_version_headers(record_format_version)
 
     severity = request.headers.get('Severity')
     classification = request.headers.get('Classification')
@@ -191,15 +237,18 @@ def collector_post_handler():
     else:
         external = False
 
-    try:
-        # prefer UTF-8, if possible
-        payload = request.data.decode('utf-8')
-    except UnicodeError:
-        # fallback to Latin-1, since it accepts all byte values
-        payload = request.data.decode('latin-1')
+    # Handles payload depending on payload version and mime type
+    payload, mime_type = process_payload()
+    attachment = None
 
-    if classification == "org.clearlinux/mce/corrected" and "THERMAL" in payload:
-        classification = "org.clearlinux/mce/thermal"
+    # Interpret payload_format_version
+    if BINARY_ATTACHMENT[0] <= int(payload_format_version) <= BINARY_ATTACHMENT[1]:
+        app.logger.info("A file was uploaded {}".format(payload))
+        attachment = Attachment(**{
+            "file_path": payload,
+            "mime_type": mime_type,
+        })
+        payload = mime_type
 
     db_class = Classification.query.filter_by(classification=classification).first()
     if db_class is None:
@@ -216,6 +265,11 @@ def collector_post_handler():
     if is_crash_classification(classification):
         # must pass args as bytes to uwsgi under Python 3
         process_guilties(klass=classification.encode(), id=str(db_rec.id).encode())
+
+    # Save payload file reference if there's one
+    if BINARY_ATTACHMENT[0] <= int(payload_format_version) <= BINARY_ATTACHMENT[1]:
+        attachment.record_id = db_rec.id
+        attachment.save()
 
     resp = jsonify(db_rec.to_dict())
     resp.status_code = 201
