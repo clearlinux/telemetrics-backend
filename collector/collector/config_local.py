@@ -26,7 +26,7 @@ class Config(object):
     LOG_LEVEL = logging.ERROR
 
     # If your telemdb database password is not 'postgres', update this line.
-    SQLALCHEMY_DATABASE_URI = 'postgres://postgres:postgres@localhost/telemdb'
+    SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:postgres@localhost/telemdb'
 
     SQLALCHEMY_TRACK_MODIFICATIONS = True
     LOG_FILE = 'handler.log'
@@ -35,12 +35,15 @@ class Config(object):
     # from the time received by the `collector` app.
     MAX_WEEK_KEEP_RECORDS = 5
 
+    # Upload files path
+    ATTACHMENT_QUARANTINE_FOLDER = '/tmp/clrtelemetry.attachments/'
+
 
 class Testing(Config):
     TESTING = True
 
     # If your testdb database password is not 'postgres', update this line.
-    SQLALCHEMY_DATABASE_URI = 'postgres://postgres:postgres@localhost/testdb'
+    SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:postgres@localhost/testdb'
 
     SQLALCHEMY_TRACK_MODIFICATIONS = True
 

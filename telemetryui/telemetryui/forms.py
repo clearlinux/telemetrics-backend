@@ -33,14 +33,14 @@ from wtforms.widgets import (
 
 
 class RecordFilterForm(FlaskForm):
-    os_name = SelectField('OS Name',  coerce=str, validators=[InputRequired()])
+    os_name = SelectField('OS Name', coerce=str, validators=[InputRequired()])
     build = SelectField('Version', coerce=str, validators=[InputRequired()])
-    classification = SelectField('Classification', coerce=str,  validators=[InputRequired()])
-    severity = SelectField('Severity',  coerce=str, validators=[InputRequired()])
+    classification = SelectField('Classification', coerce=str, validators=[InputRequired()])
+    severity = SelectField('Severity', coerce=str, validators=[InputRequired()])
     machine_id = TextField('Machine ID')
     payload = TextField('Payload REGEX')
     not_payload = TextField('Payload NOT REGEX')
-    data_source = SelectField('Source',  coerce=str)
+    data_source = SelectField('Source', coerce=str)
     from_date = DateField('From date', validators=[Optional()])
     to_date = DateField('To date', validators=[Optional()])
 

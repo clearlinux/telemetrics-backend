@@ -22,19 +22,18 @@ from . import config
 from .jinja_filters import (
     timesince,
     local_datetime_since,
-    basename,
-    )
+    basename,)
 import importlib
 
 app = Flask(__name__, static_folder="static", static_url_path="/telemetryui/static")
 app.config.from_object(config.Config)
 
 try:
-   # try importing from the local dev configuration if it exists
-   from . import config_local
-   app.config.from_object(config_local.Config)
+    # try importing from the local dev configuration if it exists
+    from . import config_local
+    app.config.from_object(config_local.Config)
 except:
-   pass
+    pass
 
 from . import views
 

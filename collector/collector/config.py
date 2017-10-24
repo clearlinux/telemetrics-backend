@@ -21,7 +21,7 @@ class Config(object):
     DEBUG = False
     TESTING = False
     LOG_LEVEL = logging.ERROR
-    SQLALCHEMY_DATABASE_URI = 'postgres://postgres:@@db_password@@@localhost/telemdb'
+    SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:@@db_password@@@localhost/telemdb'
     SQLALCHEMY_TRACK_MODIFICATIONS = True
     LOG_FILE = 'handler.log'
 
@@ -35,10 +35,13 @@ class Config(object):
     # Architecture.
     TELEMETRY_ID = "6907c830-eed9-4ce9-81ae-76daf8d88f0f"
 
+    # Upload files path
+    ATTACHMENT_QUARANTINE_FOLDER = '/tmp/clrtelemetry.attachments/'
+
 
 class Testing(Config):
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = 'postgres://postgres:@@db_password@@@localhost/testdb'
+    SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:@@db_password@@@localhost/testdb'
     SQLALCHEMY_TRACK_MODIFICATIONS = True
 
 

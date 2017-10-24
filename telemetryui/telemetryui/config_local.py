@@ -26,7 +26,7 @@ class Config(object):
     LOG_LEVEL = logging.ERROR
 
     # If your telemdb database password is not 'postgres', update this line.
-    SQLALCHEMY_DATABASE_URI = 'postgres://postgres:postgres@localhost/telemdb'
+    SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:postgres@localhost/telemdb'
 
     SQLALCHEMY_TRACK_MODIFICATIONS = True
     LOG_FILE = 'handler.log'

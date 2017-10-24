@@ -15,9 +15,8 @@
 #
 
 import unittest
-from collector import app, db
-from flask import current_app
 import json
+from collector.tests.testcase_base import RecordTestCases
 
 
 def get_record():
@@ -40,21 +39,7 @@ def get_record():
     }
 
 
-class TestHandler(unittest.TestCase):
-    def setUp(self):
-        app.testing = True
-        app.config.from_object('config_local.Testing')
-        app.debug = False
-        self.app_context = app.app_context()
-        self.app_context.push()
-        db.init_app(current_app)
-        db.create_all()
-        self.client = app.test_client()
-
-    def tearDown(self):
-        db.session.remove()
-        db.drop_all()
-        self.app_context.pop()
+class TestHandler(RecordTestCases):
 
     def test_query_report(self):
         rec = get_record()
@@ -74,9 +59,7 @@ class TestHandler(unittest.TestCase):
         self.assertEqual(len(resp_obj['records']), 0)
 
 
-if __name__ == '__main__' and __package__ is None:
-    from os import sys, path
-    sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
+if __name__ == '__main__':
     unittest.main()
 
 

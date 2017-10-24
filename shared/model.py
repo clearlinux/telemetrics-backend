@@ -14,11 +14,11 @@
 # limitations under the License.
 #
 
+import os
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.sql.expression import cast
 from sqlalchemy.sql.expression import desc
 from sqlalchemy.sql.expression import case
-from sqlalchemy.sql import text
 from time import time, localtime, strftime, mktime, strptime, gmtime
 from distutils.version import LooseVersion
 
@@ -27,6 +27,7 @@ from . import app
 db = SQLAlchemy(app)
 
 MAX_WEEK_KEEP_RECORDS = app.config.get("MAX_WEEK_KEEP_RECORDS", 5)
+SECONDS_IN_A_DAY = 86400  # = 24 * 60 * 60
 
 
 class Classification(db.Model):
@@ -96,7 +97,42 @@ class Guilty(db.Model):
         return q.all()
 
 
-class Record(db.Model):
+class PurgeMixin(object):
+    MAX_WEEK_KEEP_RECORDS = app.config.get("MAX_WEEK_KEEP_RECORDS", 5)
+
+    @staticmethod
+    def purge_attachment(attachment):
+        try:
+            attachment.delete()
+        except Exception as e:
+            db.session.rollback()
+            return False
+        if os.path.exists(attachment.file_path) is True:
+            os.remove(attachment.file_path)
+        return True
+
+    @staticmethod
+    def purge_attachments():
+        attachments_to_clean = Attachment.query.filter_by(record_id=None).all()
+        return list(map(PurgeMixin.purge_attachment, attachments_to_clean))
+
+    @staticmethod
+    def delete_records():
+        try:
+            sec_weeks = PurgeMixin.MAX_WEEK_KEEP_RECORDS * 7 * SECONDS_IN_A_DAY
+            current_time = time()
+            time_weeks_ago = current_time - sec_weeks
+            q = db.session.query(Record).filter(Record.tsp_server < time_weeks_ago)
+            count = q.delete(synchronize_session=False)
+            db.session.commit()
+            print("Deleted {} old records".format(count))
+        except:
+            db.session.rollback()
+        # Remove attachments metadata and files
+        PurgeMixin.purge_attachments()
+
+
+class Record(PurgeMixin, db.Model):
     __tablename__ = 'records'
     id = db.Column(db.Integer, primary_key=True)
     severity = db.Column(db.Integer)
@@ -159,7 +195,10 @@ class Record(db.Model):
             self.payload = payload.encode('latin-1')
 
     def __repr__(self):
-        return "<Record(id='{}', class='{}', build='{}', created='{}')>".format(self.id, self.classification, self.build, strftime("%a, %d %b %Y %H:%M:%S", localtime(self.tsp)))
+        return "<Record(id='{}', class='{}', build='{}', created='{}')>".format(self.id, self.classification,
+                                                                                self.build,
+                                                                                strftime("%a, %d %b %Y %H:%M:%S",
+                                                                                         localtime(self.tsp)))
 
     def __str__(self):
         return str(self.to_dict())
@@ -289,19 +328,6 @@ class Record(db.Model):
         return records
 
     @staticmethod
-    def delete_records():
-        try:
-            sec_weeks = MAX_WEEK_KEEP_RECORDS * 7 * 24 * 60 * 60
-            current_time = time()
-            time_weeks_ago = current_time - sec_weeks
-            q = db.session.query(Record).filter(Record.tsp_server < time_weeks_ago)
-            count = q.delete(synchronize_session=False)
-            db.session.commit()
-            print("Deleted {} old records".format(count))
-        except:
-            db.session.rollback()
-
-    @staticmethod
     def get_recordcnts_by_build():
         q = db.session.query(Build.build, db.func.count(Record.id)).join(Record.build)
         q = q.filter(Build.build.op('~')('^[0-9]+$'))
@@ -337,7 +363,8 @@ class Record(db.Model):
 
     @staticmethod
     def get_os_map():
-        q = db.session.query(Record.os_name, Build.build).join(Record.build).order_by(Record.os_name).group_by(Record.os_name, Build.build).all()
+        q = db.session.query(Record.os_name, Build.build).join(Record.build).order_by(Record.os_name).group_by(
+            Record.os_name, Build.build).all()
         result = {}
         for x in q:
             result.setdefault(x[0], []).append(x[1])
@@ -380,7 +407,8 @@ class Record(db.Model):
 
     @staticmethod
     def get_top_crash_guilties(classes=None):
-        q = db.session.query(Guilty.function, Guilty.module, Build.build, db.func.count(Record.id).label('total'), Guilty.id, Guilty.comment)
+        q = db.session.query(Guilty.function, Guilty.module, Build.build, db.func.count(Record.id).label('total'),
+                             Guilty.id, Guilty.comment)
         q = q.join(Record)
         q = q.join(Build)
         q = q.join(Classification).filter(Record.classification_id == Classification.id)
@@ -393,7 +421,7 @@ class Record(db.Model):
         q = q.order_by(desc(cast(Build.build, db.Integer)), desc('total'))
         # query for records created in the last week (~ 10 Clear builds)
         q = q.filter(Build.build.in_(sorted(tuple(set([x[2] for x in q.all()])), key=lambda x: int(x))[-8:]))
-        interval_sec = 24 * 60 * 60 * 7
+        interval_sec = SECONDS_IN_A_DAY * 7
         current_time = time()
         sec_in_past = current_time - interval_sec
         q = q.filter(Record.tsp > sec_in_past)
@@ -440,7 +468,8 @@ class Record(db.Model):
         db.session.commit()
 
     @staticmethod
-    def get_crash_backtraces(classes=None, guilty_id=None, machine_id=None, build=None, most_recent=None, record_id=None):
+    def get_crash_backtraces(classes=None, guilty_id=None, machine_id=None, build=None, most_recent=None,
+                             record_id=None):
         q = db.session.query(Record.backtrace, Record.id).join(Classification)
         # Short circuit if we know the record ID
         if record_id:
@@ -458,7 +487,7 @@ class Record(db.Model):
         if machine_id:
             q = q.filter(Record.machine_id == machine_id)
         if most_recent:
-            interval_sec = 24 * 60 * 60 * int(most_recent)
+            interval_sec = SECONDS_IN_A_DAY * int(most_recent)
             current_time = time()
             sec_in_past = current_time - interval_sec
             q = q.filter(Record.tsp > sec_in_past)
@@ -488,7 +517,7 @@ class Record(db.Model):
         q = q.group_by(Build.build, Record.machine_id, Record.guilty_id)
         q = q.order_by(desc(cast(Build.build, db.Integer)), desc('total'))
         if most_recent:
-            interval_sec = 24 * 60 * 60 * int(most_recent)
+            interval_sec = SECONDS_IN_A_DAY * int(most_recent)
             current_time = time()
             sec_in_past = current_time - interval_sec
             q = q.filter(Record.tsp > sec_in_past)
@@ -499,7 +528,7 @@ class Record(db.Model):
         q = db.session.query(Record.backtrace).join(Classification)
         q = q.filter(Classification.classification == "org.clearlinux/swupd-client/update")
 
-        sec_2_weeks = 24 * 60 * 60 * 7
+        sec_2_weeks = SECONDS_IN_A_DAY * 7
         current_time = time()
         time_2_weeks_ago = current_time - sec_2_weeks
 
@@ -513,7 +542,7 @@ class Record(db.Model):
         q = q.filter(Classification.classification.like('org.clearlinux/swupd-client/%'))
 
         if most_recent:
-            interval_sec = 24 * 60 * 60 * int(most_recent)
+            interval_sec = SECONDS_IN_A_DAY * int(most_recent)
             current_time = time()
             sec_in_past = current_time - interval_sec
             q = q.filter(Record.tsp > sec_in_past)
@@ -528,14 +557,15 @@ class Record(db.Model):
         internal_expr = case([(Record.external == False, Record.machine_id), ]).label('internal_count')
         external_expr = case([(Record.external == True, Record.machine_id), ]).label('external_count')
 
-        q = db.session.query(Build.build, db.func.count(db.distinct(internal_expr)), db.func.count(db.distinct(external_expr)))
+        q = db.session.query(Build.build, db.func.count(db.distinct(internal_expr)),
+                             db.func.count(db.distinct(external_expr)))
         q = q.join(Record).join(Classification)
         q = q.filter(Classification.classification == "org.clearlinux/heartbeat/ping")
         q = q.filter(Record.os_name == 'clear-linux-os')
         q = q.group_by(Build.build)
 
         if most_recent:
-            interval_sec = 24 * 60 * 60 * int(most_recent)
+            interval_sec = SECONDS_IN_A_DAY * int(most_recent)
             current_time = time()
             sec_in_past = current_time - interval_sec
             q = q.filter(Record.tsp > sec_in_past)
@@ -616,5 +646,44 @@ class GuiltyBlacklist(db.Model):
             db.session.rollback()
             raise
 
+
+class AppModel(db.Model):
+    """
+    Generic Object with save and delete methods
+    to be use byt all of the models in this app
+    """
+    __abstract__ = True
+
+    def save(self):
+        try:
+            db.session.add(self)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+
+    def delete(self, **kwargs):
+        if kwargs is not None:
+            q = self.query.filter_by(**kwargs)
+            entry = q.first()
+        else:
+            entry = self
+        if entry is not None:
+            db.session.delete(entry)
+            db.session.commit()
+
+
+class Attachment(AppModel):
+    __tablename__ = "record_attachments"
+    id = db.Column(db.Integer, primary_key=True)
+    record_id = db.Column(db.Integer, db.ForeignKey('records.id', ondelete='SET NULL'), nullable=True)
+    record = db.relationship('Record', backref=db.backref('record_attachments'))
+    file_path = db.Column(db.String, unique=True, nullable=False)
+    mime_type = db.Column(db.String, default='')
+
+    def __init__(self, **kwargs):
+        self.record_id = kwargs.get('record_id', None)
+        self.file_path = kwargs.get('file_path', None)
+        self.mime_type = kwargs.get('mime_type', None)
 
 # vi: ts=4 et sw=4 sts=4
