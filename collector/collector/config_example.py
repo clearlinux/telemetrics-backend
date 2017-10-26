@@ -14,20 +14,14 @@
 # limitations under the License.
 #
 
-# This configuration file can be used for a local development debug server
-# at localhost:5000. Overrides the config module.
-
 import logging
 
 
 class Config(object):
-    DEBUG = True
+    DEBUG = False
     TESTING = False
     LOG_LEVEL = logging.ERROR
-
-    # If your telemdb database password is not 'postgres', update this line.
-    SQLALCHEMY_DATABASE_URI = 'postgres://postgres:postgres@localhost/telemdb'
-
+    SQLALCHEMY_DATABASE_URI = 'postgres://postgres:@@db_password@@@localhost/telemdb'
     SQLALCHEMY_TRACK_MODIFICATIONS = True
     LOG_FILE = 'handler.log'
 
@@ -39,32 +33,46 @@ class Config(object):
     # which do not match the filters in PURGE_FILTERED_RECORDS.
     # Use 0 to avoid deletion of all unfiltered records.
     MAX_DAYS_KEEP_UNFILTERED_RECORDS = 35
-    # See config_example.py for details about PURGE_FILTERED_RECORDS
+    # A dictionary in the following format:
+    # {
+    #     "<field_name>": {
+    #         "<field_value>": <max_days_to_keep>,
+    #         ...
+    #         },
+    #     ...
+    # }
+    # Currently supported fields to filter:
+    # [
+    #     'severity',
+    #     'classification',
+    #     'machine_id'
+    # ]
+    # Use 0 to avoid deletion of records that matches the filter.
+    # If you do not want to filter records to delete, just set an empty dict '{}'
     PURGE_FILTERED_RECORDS = {
+        "severity": {
+            1: 5,
+            4: 0
+        },
         "classification": {
+            "org.clearlinux/mce/*": 0,
             "org.clearlinux/hello/world": 1,
+            "org.clearlinux/heartbeat/ping": 1,
         }
     }
+
+    # The Telemetry ID (TID) accepted by this `collector` app. The ID should be a
+    # random UUID, generated with (for example) `uuidgen`. The default value
+    # set here is used for records from the Clear Linux OS for Intel
+    # Architecture.
+    TELEMETRY_ID = "6907c830-eed9-4ce9-81ae-76daf8d88f0f"
 
 
 class Testing(Config):
     TESTING = True
-
-    # If your testdb database password is not 'postgres', update this line.
-    SQLALCHEMY_DATABASE_URI = 'postgres://postgres:postgres@localhost/testdb'
-
+    SQLALCHEMY_DATABASE_URI = 'postgres://postgres:@@db_password@@@localhost/testdb'
     SQLALCHEMY_TRACK_MODIFICATIONS = True
-    MAX_DAYS_KEEP_UNFILTERED_RECORDS = 5
-    PURGE_FILTERED_RECORDS = {
-        "severity": {
-            1: 1,
-            4: 0
-        },
-        "classification": {
-            "test/keep/one": 0,
-            "test/discard/*": 1,
-        }
-    }
+    PURGE_OLD_RECORDS = True
 
 
 # vi: ts=4 et sw=4 sts=4

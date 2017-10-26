@@ -28,7 +28,6 @@ class Config(object):
     SECRET_KEY = '@@flask_key@@'
     RECORDS_PER_PAGE = 50
     MAX_RECORDS_PER_PAGE = 1000
-    MAX_WEEK_KEEP_RECORDS = 5
 
 
 class Testing(Config):
