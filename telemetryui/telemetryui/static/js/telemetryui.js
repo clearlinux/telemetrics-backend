@@ -34,7 +34,11 @@
 
     function initTabs(){
         if (window.location.pathname !== "/telemetryui/") {
-            var leading_path = window.location.pathname.split('/').slice(0,3).join('/');
+            var pathname = window.location.pathname;
+            var leading_path = pathname.split('/').slice(0,3).join('/');
+            if (pathname.search('\/plugins\/') > 0) {
+                leading_path = pathname.split('/').slice(0,4).join('/');
+            }
             jQuery("ul.nav.nav-tabs li").removeClass("active");
             jQuery('ul.nav.nav-tabs li a[href^="' + leading_path + '"]').parent().addClass("active");
         }
