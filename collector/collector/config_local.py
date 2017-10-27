@@ -54,17 +54,6 @@ class Testing(Config):
     SQLALCHEMY_DATABASE_URI = 'postgres://postgres:postgres@localhost/testdb'
 
     SQLALCHEMY_TRACK_MODIFICATIONS = True
-    MAX_DAYS_KEEP_UNFILTERED_RECORDS = 5
-    PURGE_FILTERED_RECORDS = {
-        "severity": {
-            1: 1,
-            4: 0
-        },
-        "classification": {
-            "test/keep/one": 0,
-            "test/discard/*": 1,
-        }
-    }
 
 
 # vi: ts=4 et sw=4 sts=4
