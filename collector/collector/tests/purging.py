@@ -80,6 +80,17 @@ class TestPurging(unittest.TestCase):
     def setUp(self):
         app.testing = True
         app.config.from_object('config_local.Testing')
+        app.config["MAX_DAYS_KEEP_UNFILTERED_RECORDS"] = 5
+        app.config["PURGE_FILTERED_RECORDS"] = {
+            "severity": {
+                1: 1,
+                4: 0
+            },
+            "classification": {
+                "test/keep/one": 0,
+                "test/discard/*": 1,
+            }
+        }
         app.debug = False
         self.app_context = app.app_context()
         self.app_context.push()
@@ -93,23 +104,16 @@ class TestPurging(unittest.TestCase):
         self.app_context.pop()
 
     def test_purge_delete(self):
-        record_ids = []
-        result = Record.create(*get_insert_params(2, 1, "test/discard/one"))
-        record_ids.append(result.id)
-        result = Record.create(*get_insert_params(2, 2, "test/discard/two"))
-        record_ids.append(result.id)
-        result = Record.create(*get_insert_params(2, 2, "test/discard/three"))
-        record_ids.append(result.id)
-        result = Record.create(*get_insert_params(2, 4, "test/discard/two"))
-        record_ids.append(result.id)
-        result = Record.create(*get_insert_params(2, 4, "test/discard/three"))
-        record_ids.append(result.id)
-        result = Record.create(*get_insert_params(6, 2, "test/test/one"))
-        record_ids.append(result.id)
-        result = Record.create(*get_insert_params(2, 1, "test/keep/one"))
-        record_ids.append(result.id)
+        Record.create(*get_insert_params(2, 1, "test/discard/one"))
+        Record.create(*get_insert_params(2, 2, "test/discard/two"))
+        Record.create(*get_insert_params(2, 2, "test/discard/three"))
+        Record.create(*get_insert_params(2, 4, "test/discard/two"))
+        Record.create(*get_insert_params(2, 4, "test/discard/three"))
+        Record.create(*get_insert_params(6, 2, "test/test/one"))
+        Record.create(*get_insert_params(2, 1, "test/keep/one"))
+        self.assertTrue(Record.query.count() == 7)
         Record.delete_records()
-        self.assertTrue(Record.query.filter(Record.id.in_(record_ids)).all() == [])
+        self.assertTrue(Record.query.count() == 0)
 
     def test_purge_keep(self):
         Record.create(*get_insert_params(6, 2, "test/keep/one"))
