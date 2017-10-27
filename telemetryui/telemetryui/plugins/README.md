@@ -130,3 +130,89 @@ class Config(object):
 
 Remember the plugin name is the name of the python module that was dropped
 in the plugins folder in telemetryui.
+
+
+### Considerations when multiple plugins are installed
+
+Because plugins are flask blueprints the same considerations should be applied when
+multiple plugins are added.
+
+When specifying a *template directory* (see following code snippet)
+
+```python
+my_plugin = Blueprint('my_plugin', __name__, template_folder="template")
+```
+
+Make sure that there is no templates with the same name on other plugins otherwise the
+app will used the template file that was registered first. For example if we have pluginview_2
+and pluginview_2 and both have a relative template directory and both have a view_template.html
+the plugins that is registered first (the first plugin in the list of plugins in configuration file).
+A good rule is to name templates prepending the name of the plugin to the template. i.e.
+
+```buildoutcfg
+plugins/
+        pluginview_1/
+                    __init__.py
+                    views.py
+                    templates/
+                            pluginview_1_index.html
+
+        pluginview_2/
+                    __init__.py
+                    views.py
+                    templates/
+                            pluginview_2_index.html
+
+```
+
+For more advanced uses like overwriting templates (not recommended) read [this](http://flask.pocoo.org/docs/0.12/blueprints/#templates) section on flask blueprints.
+
+
+For *static content* the behavior is very similar to templates when **static_folder** blueprint parameter is
+specified i.e.:
+
+With:
+```buildoutcfg
+plugins/
+        my_plugin/
+                  __init__.py
+                  views.py
+                  templates
+                  static/
+                        my_plugin.css
+
+        your_plugin/
+                    __init__.py
+                    views.py
+                    templates
+                    static/
+                          your_plugin.css
+
+```
+
+And:
+
+**plugins/my_plugin/views.py**
+```python
+my_plugin = Blueprint('my_plugin', __name__,
+                      template_folder="template",
+                      static_folder="static")
+```
+
+**plugins/your_plugin/views.py**
+```python
+your_plugin = Blueprint('your_plugin', __name__,
+                        template_folder="template",
+                        static_folder="static")
+```
+
+The location of the static files will be:
+
+```commandline
+<server>/telemetryui/plugins/my_plugin.css
+<server>/telemetryui/plugins/your_plugin.css
+```
+
+Noticed how the *namespace* got flattened when both plugins have the same value for
+*static_folder*. This means two plugins can not have static content with the same name,
+in this case the static content of the first registered blueprint will take precedence.
