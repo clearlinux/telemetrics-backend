@@ -119,6 +119,10 @@ class TestPurging(unittest.TestCase):
         Record.create(*get_insert_params(6, 2, "test/keep/one"))
         Record.create(*get_insert_params(3, 2, "test/test/one"))
         Record.create(*get_insert_params(6, 4, "test/test/one"))
+        Record.create(*get_insert_params(2, 4, "test/discard/three"))
+        Record.create(*get_insert_params(6, 2, "test/test/one"))
+        Record.create(*get_insert_params(2, 1, "test/keep/one"))
+        self.assertTrue(Record.query.count() == 6)
         Record.delete_records()
         self.assertTrue(len(Record.query.all()) == 3)
 
