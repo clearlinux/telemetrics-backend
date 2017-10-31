@@ -168,10 +168,9 @@ plugins/
 For more advanced uses like overwriting templates (not recommended) read [this](http://flask.pocoo.org/docs/0.12/blueprints/#templates) section on flask blueprints.
 
 
-For *static content* the behavior is very similar to templates when **static_folder** blueprint parameter is
-specified i.e.:
+For *static content* the behavior can be controlled with **static_folder** and **static_url_path** blueprint parameters for
+example for:
 
-With:
 ```buildoutcfg
 plugins/
         my_plugin/
@@ -196,6 +195,7 @@ And:
 ```python
 my_plugin = Blueprint('my_plugin', __name__,
                       template_folder="template",
+                      static_url_path="/my_plugin/static",
                       static_folder="static")
 ```
 
@@ -203,16 +203,50 @@ my_plugin = Blueprint('my_plugin', __name__,
 ```python
 your_plugin = Blueprint('your_plugin', __name__,
                         template_folder="template",
+                        static_url_path="/your_plugin/static",
                         static_folder="static")
 ```
 
 The location of the static files will be:
 
 ```commandline
-<server>/telemetryui/plugins/my_plugin.css
-<server>/telemetryui/plugins/your_plugin.css
+/telemetryui/plugins/my_plugin/static/css/my_plugin.css
+/telemetryui/plugins/your_plugin/static/css/your_plugin.css
 ```
 
-Noticed how the *namespace* got flattened when both plugins have the same value for
-*static_folder*. This means two plugins can not have static content with the same name,
-in this case the static content of the first registered blueprint will take precedence.
+Specifying the static_url_path allows flask to resolve the link to the right
+file if two plugins have static files with the same name and extension.  
+
+### utility functions for creating views
+
+The demo example in the plugins folder makes use of utility functions to simplify
+the creation of a plugin.
+
+```python
+from telemetryui.plugins.telem_view import (
+    new_telem_view,
+    get_default_route,)
+``` 
+
+These two imported functions can be used to create the blueprint and obtain the default route
+for the tab created by the plugin.
+
+```python
+
+# new_telem_view: Creates and returns a blueprint with the import name as parameter, all
+# the details about the blueprint creation are abstracted behind this function
+
+plugin_demo = new_telem_view(__name__)
+```
+
+For the default route for the plugin we can use:
+
+```python
+
+# get_default_route: extracts plugin name from the import name and returns the route
+# path for this plugin
+
+@plugin_demo.route(get_default_route(__name__), methods=['GET'])
+
+```
+
