@@ -259,7 +259,7 @@ The `collector` app uses the uWSGI cron interface to purge records in the
 database on a daily basis that are older than a certain age. By default, a
 record will only be kept in the database for 5 weeks (starting from the
 timestamp the `collector` received the record). To modify the retention
-time, update the `MAX_WEEK_KEEP_RECORDS` value in
+time, update the `MAX_DAYS_KEEP_UNFILTERED_RECORDS` value in
 `collector/collector/config.py` after installation, and restart
 uWSGI for the new setting to take effect.
 
