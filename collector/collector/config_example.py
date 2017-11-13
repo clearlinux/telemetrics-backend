@@ -21,7 +21,7 @@ class Config(object):
     DEBUG = False
     TESTING = False
     LOG_LEVEL = logging.ERROR
-    SQLALCHEMY_DATABASE_URI = 'postgres://postgres:@@db_password@@@localhost/telemdb'
+    SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:@@db_password@@@localhost/telemdb'
     SQLALCHEMY_TRACK_MODIFICATIONS = True
     LOG_FILE = 'handler.log'
 
@@ -70,7 +70,7 @@ class Config(object):
 
 class Testing(Config):
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = 'postgres://postgres:@@db_password@@@localhost/testdb'
+    SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:@@db_password@@@localhost/testdb'
     SQLALCHEMY_TRACK_MODIFICATIONS = True
     PURGE_OLD_RECORDS = True
 
