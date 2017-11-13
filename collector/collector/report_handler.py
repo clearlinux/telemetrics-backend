@@ -20,6 +20,10 @@ import datetime
 from flask import request
 from flask import jsonify
 from flask import redirect
+from .lib.validation import (
+    validate_header,
+    record_format_version_headers_validation,
+    InvalidUsage)
 from .model import (
     Classification,
     Build)
@@ -35,59 +39,8 @@ ts_v3_regex = re.compile("^[0-9]+$")
 # FIXME: configurable limits
 max_payload_len_inline = 30 * 1024	 # 30k
 max_payload_len = 300 * 1024		 # 300k
-POSTGRES_INT_MAX = 2147483647
 MAX_NUM_RECORDS = '1000'
 MAX_INTERVAL_SEC = 24 * 60 * 60 * 30    # 30 days in seconds
-
-# see config.py for the meaning of this value
-TELEMETRY_ID = app.config.get("TELEMETRY_ID", "6907c830-eed9-4ce9-81ae-76daf8d88f0f")
-
-
-REQUIRED_HEADERS_V1 = (
-    'Arch',
-    'Build',
-    'Creation-Timestamp',
-    'Classification',
-    'Host-Type',
-    'Kernel-Version',
-    'Machine-Id',
-    'Severity',
-    'Record-Format-Version',
-)
-
-REQUIRED_HEADERS_V2 = REQUIRED_HEADERS_V1 + (
-    'Payload-Format-Version',
-    'System-Name',
-    'X-Telemetry-Tid',
-)
-
-REQUIRED_HEADERS_V3 = REQUIRED_HEADERS_V2 + (
-    'Board-Name',
-    'Bios-Version',
-    'Cpu-Model',
-)
-
-VALID_RECORD_FORMAT_VERSIONS = [1, 2, 3]
-
-
-class InvalidUsage(Exception):
-    status_code = 400
-
-    def __init__(self, message, status_code=None, payload=None):
-        Exception.__init__(self)
-        self.message = message
-        if status_code is not None:
-            self.status_code = status_code
-        self.payload = payload
-        app.logger.error("InvalidUsage ({}): {}".format(self.status_code, self.message))
-
-    def to_dict(self):
-        rv = dict(self.payload or ())
-        rv['message'] = self.message
-        return rv
-
-    def __str__(self):
-        return self.message
 
 
 @app.errorhandler(InvalidUsage)
@@ -110,58 +63,73 @@ def before_request():
     )
 
 
-def validate_headers(headers, required_headers):
-    req_headers = dict(headers)
-    req_headers_keys = req_headers.keys()
-    for header in required_headers:
-        if header not in req_headers_keys:
-            raise InvalidUsage("Request header {} is missing".format(header), 400)
-        if not request.headers.get(header):
-            raise InvalidUsage("Request header {} is blank".format(header), 400)
-    return True
+def validate_header_value(header_value, record_name, err_msg):
+    try:
+        if validate_header(record_name, header_value) is True:
+            return header_value
+    except Exception as e:
+        err_msg = "Error parsing {}, {}".format(record_name, e)
+    raise InvalidUsage(err_msg, 400)
 
 
 def collector_post_handler():
-
-    tid_header = request.headers.get('X-Telemetry-TID')
 
     # The collector only accepts records with the configured TID value.
     # Make sure the TID in the collector config.py matches the TID
     # configured for telemetrics-client on the systems from which this
     # collector receives records.
-    if tid_header != TELEMETRY_ID:
-        err = "Telemetry ID mismatch. Expected: {}; Actual: {}".format(TELEMETRY_ID, tid_header)
-        raise InvalidUsage(err, 400)
+    tid_header = request.headers.get("X-Telemetry-TID")
+    validate_header_value(tid_header, "tid_header", "Telemetry ID mismatch")
 
-    record_format_version = request.headers.get('Record-Format-Version', -1)
-    if str(record_format_version).isdigit() and int(record_format_version) not in VALID_RECORD_FORMAT_VERSIONS:
-        raise InvalidUsage("Record-Format-Version is invalid", 400)
+    record_format_version = request.headers.get("Record-Format-Version")
+    validate_header_value(record_format_version, "record_format_version", "Record-Format-Version is invalid")
 
-    # Validate required headers based on Record Version
-    if int(record_format_version) == 1:
-        validate_headers(request.headers, REQUIRED_HEADERS_V1)
-    elif int(record_format_version) == 2:
-        validate_headers(request.headers, REQUIRED_HEADERS_V2)
-    elif int(record_format_version) == 3:
-        validate_headers(request.headers, REQUIRED_HEADERS_V3)
-    else:
-        raise InvalidUsage("Record-Format-Version value is not supported", 400)
+    if record_format_version_headers_validation(record_format_version, request.headers) is not True:
+        raise InvalidUsage("Record-Format-Version headers are invalid", 400)
 
-    severity = request.headers.get('Severity')
-    classification = request.headers.get('Classification')
-    machine_id = request.headers.get('Machine-Id')
-    if len(machine_id) > 32:
-        raise InvalidUsage("Machine id too long", 400)
-    timestamp = request.headers.get('Creation-Timestamp')
+    severity = request.headers.get("Severity")
+    validate_header_value(severity, "severity", "severity value is out of range")
+
+    classification = request.headers.get("Classification")
+    validate_header_value(classification, "classification", "Classification value is invalid")
+
+    machine_id = request.headers.get("Machine-Id")
+    validate_header_value(machine_id, "machine_id", "Machine id value is invalid")
+
+    timestamp = request.headers.get("Creation-Timestamp")
+    validate_header_value(timestamp, "timestamp", "timestamp is invalid")
+
     ts_capture = int(timestamp)
     ts_reception = time.time()
 
-    architecture = request.headers.get('Arch')
-    host_type = request.headers.get('Host-Type')
-    kernel_version = request.headers.get('Kernel-Version')
-    board_name = request.headers.get('Board-Name')
-    cpu_model = request.headers.get('Cpu-Model')
-    bios_version = request.headers.get('Bios-Version')
+    architecture = request.headers.get("Arch")
+    validate_header_value(architecture, "architecture", "architecture is invalid")
+
+    host_type = request.headers.get("Host-Type")
+    validate_header_value(host_type, "host_type", "host type is invalid")
+
+    kernel_version = request.headers.get("Kernel-Version")
+    validate_header_value(kernel_version, "kernel_version", "kernel version is invalid")
+
+    if record_format_version == '2':
+        board_name = "N/A"
+        cpu_model = "N/A"
+        bios_version = "N/A"
+
+    elif record_format_version == '3':
+        board_name = request.headers.get("Board-Name")
+        validate_header_value(board_name, "board_name", "board name is invalid")
+
+        cpu_model = request.headers.get("Cpu-Model")
+        validate_header_value(cpu_model, "cpu_model", "cpu model is invalid")
+
+        bios_version = request.headers.get("Bios-Version")
+        validate_header_value(bios_version, "bios_version", "BIOS version is invalid")
+    else:
+        board_name = ""
+        cpu_model = ""
+        bios_version = ""
+
     os_name = request.headers.get('System-Name')
     os_name = os_name.replace('"', '').replace("'", "")
     build = request.headers.get('Build')
@@ -181,9 +149,9 @@ def collector_post_handler():
         if not build_regex.match(build):
             raise InvalidUsage("Build version has invalid characters")
 
-    payload_format_version = request.headers.get('Payload-Format-Version')
-    if int(payload_format_version) > POSTGRES_INT_MAX:
-        raise InvalidUsage("Payload format version outside of range supported")
+    payload_format_version = request.headers.get("Payload-Format-Version")
+    validate_header_value(payload_format_version, "payload_format_version",
+                          "Payload format version outside of range supported")
 
     external = request.headers.get('X-CLR-External')
     if external and external == "true":
@@ -197,9 +165,6 @@ def collector_post_handler():
     except UnicodeError:
         # fallback to Latin-1, since it accepts all byte values
         payload = request.data.decode('latin-1')
-
-    if classification == "org.clearlinux/mce/corrected" and "THERMAL" in payload:
-        classification = "org.clearlinux/mce/thermal"
 
     db_class = Classification.query.filter_by(classification=classification).first()
     if db_class is None:
