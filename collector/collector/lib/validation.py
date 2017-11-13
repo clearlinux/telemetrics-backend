@@ -16,6 +16,7 @@
 
 import string
 from .. import app
+MAX_NUM_RECORDS = '1000'
 
 REQUIRED_HEADERS_V1 = (
     'Arch',
@@ -77,12 +78,24 @@ def validate_headers(headers, required_headers):
     req_headers_keys = req_headers.keys()
     for header in required_headers:
         if header not in req_headers_keys:
-            return False
+            raise InvalidUsage("Record-Format-Version headers are invalid, {} missing".format(header), 400)
     return True
 
 
+def is_not_none(v):
+    return v is not None
+
+
+def is_a_number(n):
+    return str(n).isdigit()
+
+
+def value_is_printable(a_value):
+    return all([x in string.printable for x in a_value])
+
+
 def record_format_version_validation(record_format_version):
-    return record_format_version and int(record_format_version) in VALID_RECORD_FORMAT_VERSIONS
+    return all([is_not_none(record_format_version), is_a_number(record_format_version)]) and int(record_format_version) in VALID_RECORD_FORMAT_VERSIONS
 
 
 def record_format_version_headers_validation(record_format_version, headers):
@@ -96,31 +109,26 @@ def record_format_version_headers_validation(record_format_version, headers):
     return False
 
 
-def value_is_printable(a_value):
-    return all([x in string.printable for x in a_value])
-
-
 def validation_tid_header(tid):
     return tid == TELEMETRY_ID
 
 
 def validate_severity(severity):
-    return severity not in SEVERITY_VALUES
+    return is_a_number(severity) and int(severity) in SEVERITY_VALUES
 
 
 def validate_classification(classification):
-    return classification is not None and len(classification.split('/')) == 3
+    return is_not_none(classification) and len(classification.split('/')) == 3
 
 
 def validate_machine_id(machine_id):
-    return machine_id is not None and len(machine_id) <= 32
+    return is_not_none(machine_id) and len(machine_id) <= 32
 
 
 def validate_timestamp(timestamp):
     """ Verify that the ts is at least > 01/01/2017"""
-    return timestamp is not None and \
-           str(timestamp).isdigit() and \
-           int(timestamp) > 1483232400 & len(str(timestamp)) == 10 & str(timestamp).isdigit()
+    return all([is_not_none(timestamp), is_a_number(timestamp)]) and \
+           int(timestamp) > 1483232400 and len(str(timestamp)) == 10
 
 
 def validate_architecture(arch):
@@ -128,7 +136,7 @@ def validate_architecture(arch):
 
 
 def validate_host_type(host_type):
-    return host_type and len(host_type) < 250
+    return is_not_none(host_type) and len(host_type) < 250
 
 
 def validate_kernel_version(kernel_version):
@@ -138,7 +146,7 @@ def validate_kernel_version(kernel_version):
     try:
         version, major_revision, _ = str(kernel_version).split('.', maxsplit=2)
         minor_version, _ = str(_).split('-', maxsplit=1)
-        return all([x.isdigit() for x in [version, major_revision, minor_version]])
+        return all([is_a_number(x) for x in [version, major_revision, minor_version]])
     except ValueError as e:
         print(e)
         return False
@@ -149,7 +157,15 @@ def validate_payload_format_version(payload_format_version):
 
 
 def validate_x_header(header_value):
-    return header_value is not None and len(header_value) < MAXLEN_PRINTABLE and value_is_printable(header_value)
+    return is_not_none(header_value) and len(header_value) < MAXLEN_PRINTABLE and value_is_printable(header_value)
+
+
+def validate_created(created):
+    return is_a_number(created)
+
+
+def validate_record_limit(limit):
+    return is_a_number(limit) and limit <= MAX_NUM_RECORDS
 
 
 def validate_header(name, value, expected=None):
@@ -168,6 +184,19 @@ def validate_header(name, value, expected=None):
             'board_name': validate_x_header,
             'cpu_model': validate_x_header,
             'bios_version': validate_x_header,
+            'build': validate_x_header,
         }.get(name, lambda x: False)(value)
     else:
         return value == expected
+
+
+def validate_query(name, value):
+    return {
+        'severity': validate_severity,
+        'classification': validate_classification,
+        'build': validate_x_header,
+        'limit': validate_record_limit,
+        'machine_id': validate_machine_id,
+        'created_in_days': validate_created,
+        'created_in_sec': validate_created,
+    }.get(name, lambda x: False)(value)

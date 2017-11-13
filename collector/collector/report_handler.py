@@ -22,6 +22,8 @@ from flask import jsonify
 from flask import redirect
 from .lib.validation import (
     validate_header,
+    validate_query,
+    MAX_NUM_RECORDS,
     record_format_version_headers_validation,
     InvalidUsage)
 from .model import (
@@ -39,7 +41,6 @@ ts_v3_regex = re.compile("^[0-9]+$")
 # FIXME: configurable limits
 max_payload_len_inline = 30 * 1024	 # 30k
 max_payload_len = 300 * 1024		 # 300k
-MAX_NUM_RECORDS = '1000'
 MAX_INTERVAL_SEC = 24 * 60 * 60 * 30    # 30 days in seconds
 
 
@@ -63,6 +64,13 @@ def before_request():
     )
 
 
+def clean_build_n_value(build):
+    # It is common to see the build numbers quoted in os-release. We don't
+    # need the quotes, so strip them from the semantic value.
+    _build = build.replace('"', '').replace("'", "")
+    return _build
+
+
 def validate_header_value(header_value, record_name, err_msg):
     try:
         if validate_header(record_name, header_value) is True:
@@ -84,8 +92,7 @@ def collector_post_handler():
     record_format_version = request.headers.get("Record-Format-Version")
     validate_header_value(record_format_version, "record_format_version", "Record-Format-Version is invalid")
 
-    if record_format_version_headers_validation(record_format_version, request.headers) is not True:
-        raise InvalidUsage("Record-Format-Version headers are invalid", 400)
+    record_format_version_headers_validation(record_format_version, request.headers)
 
     severity = request.headers.get("Severity")
     validate_header_value(severity, "severity", "severity value is out of range")
@@ -133,9 +140,7 @@ def collector_post_handler():
     os_name = request.headers.get('System-Name')
     os_name = os_name.replace('"', '').replace("'", "")
     build = request.headers.get('Build')
-    # It is common to see the build numbers quoted in os-release. We don't
-    # need the quotes, so strip them from the semantic value.
-    build = build.replace('"', '').replace("'", "")
+    build = clean_build_n_value(build)
     # The build number is stored as a string in the database, but if this
     # record is from a Clear Linux OS system, only accept an integer.
     # Otherwise, loosen the restriction to the characters listed for
@@ -187,63 +192,58 @@ def collector_post_handler():
     return resp
 
 
+def validate_query_value(query_value, query_name, err_msg):
+    try:
+        if validate_query(query_name, query_value) is True:
+            return query_value
+    except Exception as e:
+        err_msg = "Error parsing {}, {}".format(query_name, e)
+    raise InvalidUsage(err_msg, 400)
+
+
 def get_records_api_handler():
-    query_filter = {}
-
-    params = ['severity', 'classification', 'build', 'machine_id', 'created_in_days', 'created_in_sec', 'limit']
-
-    # Build filter query
-    for param in params:
-        param_val = request.args.get(param, None)
-        if param_val is not None:
-            query_filter.update({param: param_val})
 
     # Validate query parameters correctness
-    if not query_filter.get('severity', '123').isdigit():
-        raise InvalidUsage("Severity should be a numeric value", 400)
+    severity = request.args.get("severity", None)
+    if severity is not None:
+        validate_query_value(severity, "severity", "Severity should be a numeric value")
 
-    if len(query_filter.get('classification', 'abc')) > 140:
-        raise InvalidUsage("Classification string too long", 400)
+    classification = request.args.get('classification', None)
+    if classification is not None:
+        validate_query_value(classification, "classification", "Classification value is invalid")
 
-    if len(query_filter.get('build', '1234')) > 256:
-        raise InvalidUsage("Build string too long", 400)
+    build = request.args.get('build', None)
+    if build is not None:
+        build = clean_build_n_value(build)
+        validate_query_value(build, "build", "Build value is invalid")
 
-    if len(query_filter.get('machine_id', '1234')) > 32:
-        raise InvalidUsage("Machine id too long", 400)
+    machine_id = request.args.get('machine_id', None)
+    if machine_id is not None:
+        validate_query_value(machine_id, "machine_id", "Machine id value is invalid")
 
-    if not query_filter.get('created_in_days', '123').isdigit():
-        raise InvalidUsage("created_in_days should be a numeric value", 400)
+    created_in_days = request.args.get('created_in_days', None)
+    if created_in_days is not None:
+        validate_query_value(created_in_days, "created_in_days", "Created (in days) value is invalid")
 
-    if not query_filter.get('created_in_sec', '123').isdigit():
-        raise InvalidUsage("created_in_sec should be a numeric value", 400)
+    created_in_sec = request.args.get('created_in_sec', None)
+    if created_in_sec is not None:
+        validate_query_value(created_in_sec, "created_in_sec", "Created (in seconds) value is invalid")
 
-    if not query_filter.get('created_in_days', 123) > 0:
-        raise InvalidUsage("created_in_days should not be negative", 400)
+    limit = request.args.get('limit', MAX_NUM_RECORDS)
+    if limit != MAX_NUM_RECORDS:
+        validate_query_value(limit, "limit", "Record limit value is invalid")
 
-    if not query_filter.get('created_in_sec', 123) > 0:
-        raise InvalidUsage("created_in_sec should not be negative", 400)
-
-    if not query_filter.get('limit', '1000').isdigit():
-        raise InvalidUsage("Limit should not be negative", 400)
-
-    created_in_days = query_filter.get('created_in_days', None)
-    created_in_sec = query_filter.get('created_in_sec', None)
-    interval_sec = None
-
+    # Transform days interval to seconds
     if created_in_days is not None:
         created_in_days = int(created_in_days)
         interval_sec = 24 * 60 * 60 * created_in_days
     elif created_in_sec is not None:
         interval_sec = int(created_in_sec)
+    else:
+        interval_sec = MAX_INTERVAL_SEC
 
     if interval_sec is not None and interval_sec > MAX_INTERVAL_SEC:
         interval_sec = MAX_INTERVAL_SEC
-
-    limit = query_filter.get('limit', MAX_NUM_RECORDS)
-    build = query_filter.get('build', None)
-    classification = query_filter.get('classification', None)
-    severity = query_filter.get('severity', None)
-    machine_id = query_filter.get('machine_id', None)
 
     records = Record.query_records(build, classification, severity, machine_id, limit, interval_sec)
     record_list = [Record.to_dict(rec) for rec in records]
