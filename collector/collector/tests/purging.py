@@ -23,7 +23,11 @@ from collector.model import (
     Record,
     Classification,
     Build)
-import json
+
+from collector.tests.testcase import (
+    RecordTestCases,
+    get_record,)
+
 
 def get_insert_params(days_old, severity, classification):
     record = get_record()
@@ -55,26 +59,8 @@ def get_insert_params(days_old, severity, classification):
         "Test"
     ]
 
-def get_record():
-    return {
-        "X-Telemetry-TID": "6907c830-eed9-4ce9-81ae-76daf8d88f0f",
-        "record_format_version": "2",
-        "severity": "1",
-        "classification": "org.clearlinux/keep/one",
-        "machine_id": "clr-linux",
-        "creation_timestamp": "1505235249",
-        "arch": "x86_64",
-        "host_type": "blank|blank|blank",
-        "kernel_version": "4.12.5-374.native",
-        "system_name": "clear-linux-os",
-        "build": "17700",
-        "payload_format_version": "1",
-        "board_name": "D54250WYK|Intel Corporation",
-        "cpu_model": "Intel(R) Core(TM) i5-4250U CPU @ 1.30GHz",
-        "bios_version": "WYLPT10H.86A.0041.2015.0720.1108"
-    }
 
-class TestPurging(unittest.TestCase):
+class TestPurging(RecordTestCases):
     """ Generic object for telemetry record tests """
 
     def setUp(self):
@@ -98,11 +84,6 @@ class TestPurging(unittest.TestCase):
         db.create_all()
         self.client = app.test_client()
 
-    def tearDown(self):
-        db.session.remove()
-        db.drop_all()
-        self.app_context.pop()
-
     def test_purge_delete(self):
         Record.create(*get_insert_params(2, 1, "test/discard/one"))
         Record.create(*get_insert_params(2, 2, "test/discard/two"))
@@ -125,6 +106,7 @@ class TestPurging(unittest.TestCase):
         self.assertTrue(Record.query.count() == 6)
         Record.delete_records()
         self.assertTrue(len(Record.query.all()) == 3)
+
 
 if __name__ == '__main__' and __package__ is None:
     from os import sys, path
