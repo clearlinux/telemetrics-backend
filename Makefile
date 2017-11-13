@@ -1,4 +1,6 @@
 VERSION = 1.0.0
+HOST=0.0.0.0
+WARNING="*** This is only for debugging tasks, DO NOT use this on production ***"
 
 release:
 	@git rev-parse v$(VERSION) &> /dev/null; \
@@ -14,6 +16,14 @@ release:
 	fi; \
 	git tag -a -m "Release $(VERSION)" v$(VERSION); \
 	printf "\nNew release $(VERSION) tagged!\n\n"
+
+run-collector:
+	echo $(WARNING)
+	FLASK_APP=collector/collector/report_handler.py flask run --host $(HOST) ${PORT}
+
+run-telemetryui:
+	echo $(WARNING)
+	FLASK_APP=telemetryui/telemetryui/views.py flask run --host $(HOST) ${PORT}
 
 run-tests:
 	PYTHONPATH=/$(shell pwd)/collector python3 collector/collector/tests/headers.py
