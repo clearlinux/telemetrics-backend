@@ -55,7 +55,7 @@ def get_record_v1():
     return {
         arch: 'x86_64',
         build: '550',
-        timestamp: 2752515,
+        timestamp: 1483232401,
         classification: 'a/b/c',
         host_type: 'LenovoT20',
         kernel_version: '3.16.4-123.generic',
