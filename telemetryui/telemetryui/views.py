@@ -461,80 +461,42 @@ def mce():
     records = Record.filter_records(None, mce_classes, None).all()
     top10 = []
     maxcnt = 0
-    builds = set()
     by_machine_id = {}
-    by_classification = {}
+    by_builds = {}
+    week_rec_map = {}
+    class_rec_map = {}
     for record in records:
-        builds.add(record.build.build)
-        if record.classification.classification in by_classification:
-            by_classification[record.classification.classification].append(record)
-        else:
-            by_classification[record.classification.classification] = [record]
-        if record.machine_id in by_machine_id:
-            if record.build.build in by_machine_id[record.machine_id]["builds"]:
-                by_machine_id[record.machine_id]["builds"][record.build.build] += 1
-            else:
-                by_machine_id[record.machine_id]["builds"][record.build.build] = 1
-            by_machine_id[record.machine_id]["recordscnt"] += 1
-        else:
-            by_machine_id[record.machine_id] = {
-                "builds": {record.build.build: 1},
-                "recordscnt": 1
-            }
-    builds = sorted(builds)
-    by_builds = dict.fromkeys(builds, 0)
+        week = time.strftime("%U", time.localtime(int(record.tsp)))
+        week_rec_map.setdefault(week, {}).setdefault(record.classification.classification, 0)
+        week_rec_map[week][record.classification.classification] += 1
+        class_rec_map.setdefault(record.classification.classification, 0)
+        class_rec_map[record.classification.classification] += 1
+        by_machine_id.setdefault(record.machine_id, {"builds": {record.build.build: 0}, "recordscnt": 0})
+        by_machine_id[record.machine_id]["builds"][record.build.build] += 1
+        by_machine_id[record.machine_id]["recordscnt"] += 1
+        by_builds.setdefault(record.build.build, 0)
+        by_builds[record.build.build] += 1
     for machine_id in list(by_machine_id.keys()):
         builds_cnt = by_machine_id[machine_id]["builds"]
         maxcnt = max(list(builds_cnt.values()) + [maxcnt])
-        for build in list(builds_cnt.keys()):
-            by_builds[build] += builds_cnt[build]
         top10.append({
             "machine_id": machine_id,
             "recordscnt": by_machine_id[machine_id]["recordscnt"],
             "builds": by_machine_id[machine_id]["builds"]
         })
     top10.sort(key=lambda x: x["recordscnt"], reverse=True)
-    build_pairs = [(build, by_builds[build]) for build in builds]
-    current_year = time.strftime("%Y", time.gmtime(time.time()))
-    current_week = time.strftime("%U", time.gmtime(time.time()))
-    current_last_week = time.strftime("%U", time.strptime(current_year + "1231", "%Y%m%d"))
-    week_rec_map = {}
-    class_pairs = []
-    has_thermal_event = False
-    for clas in list(by_classification.keys()):
-        current_class_records = by_classification[clas]
-        class_pairs.append((clas, len(current_class_records)))
-        for i in range(int(current_week)):
-            week = str(i + 1)
-            week_start = time.mktime(time.strptime(current_year + week + "0", "%Y%U%w"))
-            next_week = str(i + 2)
-            year = current_year
-            if int(week) == int(current_last_week):
-                next_week = '01'
-                year = str(int(current_year) + 1)
-            week_start = time.mktime(time.strptime(current_year + week + "0", "%Y%U%w"))
-            week_end = time.mktime(time.strptime(year + next_week + "0", "%Y%U%w"))
-            week_class_rec = [x for x in current_class_records if x.tsp >= week_start and x.tsp <= week_end]
-            if len(week_class_rec):
-                if week in week_rec_map:
-                    week_rec_map[week][clas] = len(week_class_rec)
-                else:
-                    week_rec_map[week] = {clas: len(week_class_rec)}
     weeks = sorted(week_rec_map.keys(), key=lambda x: int(x), reverse=True)
     fullmce = [["MCE type"] + ["Week: " + x for x in weeks]]
-    for clas in sorted(by_classification.keys()):
+    for clas in sorted(class_rec_map.keys()):
         current_class_records = [clas]
         for week in weeks:
-            if clas in week_rec_map[week]:
-                current_class_records.append(week_rec_map[week][clas])
-            else:
-                current_class_records.append(0)
+            current_class_records.append(week_rec_map[week].get(clas, 0))
         if len(current_class_records) > 1:
             fullmce.append(current_class_records)
     fullmce = json.dumps(fullmce)
-    charts = [{'column': 'classification', 'record_stats': class_pairs, 'type': 'pie', 'width': 6},
-              {'column': 'build', 'record_stats': build_pairs, 'type': 'column', 'width': 6}]
-    return render_template('mce.html', charts=charts, top10=top10, builds=builds, maxcnt=maxcnt, fullmce=fullmce)
+    charts = [{'column': 'classification', 'record_stats': class_rec_map.items(), 'type': 'pie', 'width': 6},
+              {'column': 'build', 'record_stats': sorted(by_builds.items(), key=lambda x: x[0]), 'type': 'column', 'width': 6}]
+    return render_template('mce.html', charts=charts, top10=top10, builds=sorted(by_builds.keys()), maxcnt=maxcnt, fullmce=fullmce)
 
 
 @app.route('/telemetryui/thermal', methods=['GET', 'POST'])
