@@ -22,35 +22,23 @@
 })(this.telemetryUI, function(rootObj){
 
 
-    function parseFullChartData(data){
+    function parseMCEChartData(name, data){
 
-        var dataSets = [];
-
-        if(data.length > 0){
-            var weeks = data.shift(1);
-            weeks.shift(1);
-
-            for (var z in data){
-                var values = data[z].splice(1);
-                var labels = data[z];
-                var dataSet = [];
-
-                for(var x in values){
-                    dataSet.push({
-                      label: weeks[x],
-                      backgroundColor: rootObj.backgroundColors[x],
-                      data: [values[x]]
-                    });
-                }
-
-                dataSets.push({
-                        labels: labels,
-                        datasets: dataSet
-                });
-            }
+        var dataSet = [];
+        var counter = 0
+        for(var label in data){
+            dataSet.push({
+              label: "Week "+label,
+              backgroundColor: rootObj.backgroundColors[counter%14],
+              data: [data[label]]
+            });
+            counter++;
         }
 
-        return dataSets;
+        return {
+                labels: [name],
+                datasets: dataSet
+        }
     }
 
 
@@ -73,20 +61,7 @@
         };
 
         rootObj.newChart(ctx, "bar", data, options);
-    }
 
-
-    function renderFullMCE(ctx1, ctx2, values) {
-
-        var dataSets = parseFullChartData(values);
-
-        for (var x in dataSets) {
-            renderOneChart(
-                [ctx1, ctx2][x],
-                dataSets[x]);
-        }
-
-    }
 
 
     function renderMCEClass(ctx, labels, values){
@@ -164,5 +139,6 @@
 
     rootObj.renderMCEClass = renderMCEClass;
     rootObj.renderMCEReports = renderMCEReports;
-    rootObj.renderFullMCE = renderFullMCE;
+    rootObj.parseMCEChartData = parseMCEChartData;
+    rootObj.renderOneChart = renderOneChart;
 });
