@@ -33,15 +33,11 @@
 {%- endwith %}
 
 <div class="row">
-    {%- if fullmce %}
-    <div class="col-md-6" style="min-height: 500px;">
-        <canvas id="fullmce-chart-UNCA" width="800" height="450"></canvas>
+    {%- for clas in fullmce %}
+    <div class="col-md-12" style="min-height: 200px;">
+        <canvas id="fullmce-chart-{{ clas }}" width="800" height="200"></canvas>
     </div>
-    <div class="col-md-6" style="min-height: 500px;">
-        <canvas id="fullmce-chart-corrected" width="800" height="450"></canvas>
-    </div>
-
-    {%- endif %}
+    {%- endfor %}
     <div class="col-md-12">
     <h2>Top MCE</h2>
     <table class="table table-bordered table-striped table-condensed" id="top-mce-table">
@@ -144,11 +140,10 @@ $(document).on('change', '#top-mce', function () {
             [{% for s in charts[1].record_stats %} "{{ s[0] }}", {% endfor %}],
             [{% for s in charts[1].record_stats %} "{{ s[1] }}", {% endfor %}]);
 
-        telemetryUI.renderFullMCE(
-            document.getElementById("fullmce-chart-UNCA").getContext("2d"),
-            document.getElementById("fullmce-chart-corrected").getContext("2d"),
-            {{ fullmce|safe }}
-        );
+        var fullmce = {{ fullmce|safe }};
+        for (clas in fullmce){
+            telemetryUI.renderOneChart(document.getElementById("fullmce-chart-"+clas).getContext("2d"), telemetryUI.parseMCEChartData(clas, fullmce[clas]));
+        }
 
     })();
 </script>

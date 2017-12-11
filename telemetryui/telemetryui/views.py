@@ -467,8 +467,8 @@ def mce():
     class_rec_map = {}
     for record in records:
         week = time.strftime("%U", time.localtime(int(record.tsp)))
-        week_rec_map.setdefault(week, {}).setdefault(record.classification.classification, 0)
-        week_rec_map[week][record.classification.classification] += 1
+        week_rec_map.setdefault(record.classification.classification, {}).setdefault(week, 0)
+        week_rec_map[record.classification.classification][week] += 1
         class_rec_map.setdefault(record.classification.classification, 0)
         class_rec_map[record.classification.classification] += 1
         by_machine_id.setdefault(record.machine_id, {"builds": {record.build.build: 0}, "recordscnt": 0})
@@ -485,18 +485,9 @@ def mce():
             "builds": by_machine_id[machine_id]["builds"]
         })
     top10.sort(key=lambda x: x["recordscnt"], reverse=True)
-    weeks = sorted(week_rec_map.keys(), key=lambda x: int(x), reverse=True)
-    fullmce = [["MCE type"] + ["Week: " + x for x in weeks]]
-    for clas in sorted(class_rec_map.keys()):
-        current_class_records = [clas]
-        for week in weeks:
-            current_class_records.append(week_rec_map[week].get(clas, 0))
-        if len(current_class_records) > 1:
-            fullmce.append(current_class_records)
-    fullmce = json.dumps(fullmce)
     charts = [{'column': 'classification', 'record_stats': class_rec_map.items(), 'type': 'pie', 'width': 6},
               {'column': 'build', 'record_stats': sorted(by_builds.items(), key=lambda x: x[0]), 'type': 'column', 'width': 6}]
-    return render_template('mce.html', charts=charts, top10=top10, builds=sorted(by_builds.keys()), maxcnt=maxcnt, fullmce=fullmce)
+    return render_template('mce.html', charts=charts, top10=top10, builds=sorted(by_builds.keys()), maxcnt=maxcnt, fullmce=week_rec_map)
 
 
 @app.route('/telemetryui/thermal', methods=['GET', 'POST'])
