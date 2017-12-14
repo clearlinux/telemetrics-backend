@@ -126,9 +126,7 @@ def validate_machine_id(machine_id):
 
 
 def validate_timestamp(timestamp):
-    """ Verify that the ts is at least > 01/01/2017"""
-    return all([is_not_none(timestamp), is_a_number(timestamp)]) and \
-           int(timestamp) > 1483232400 and len(str(timestamp)) == 10
+    return all([is_not_none(timestamp), is_a_number(timestamp)])
 
 
 def validate_architecture(arch):
@@ -140,13 +138,12 @@ def validate_host_type(host_type):
 
 
 def validate_kernel_version(kernel_version):
-    """ makes sure that the kernel version string has at least 3 numbers
+    """ makes sure that the kernel version string has at least 2 numbers
         version, major and minor revision
     """
     try:
         version, major_revision, _ = str(kernel_version).split('.', maxsplit=2)
-        minor_version, _ = str(_).split('-', maxsplit=1)
-        return all([is_a_number(x) for x in [version, major_revision, minor_version]])
+        return all([is_a_number(x) for x in [version, major_revision]])
     except ValueError as e:
         print(e)
         return False
