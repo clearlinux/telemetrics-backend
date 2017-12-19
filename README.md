@@ -386,5 +386,5 @@ file.
 
 ## Security Disclosures
 
-To report a security issue or receive secusity advisories please follow procedures
+To report a security issue or receive security advisories please follow procedures
 in this [link](https://01.org/security).
