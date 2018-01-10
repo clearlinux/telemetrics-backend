@@ -45,6 +45,8 @@ class Config(object):
             "org.clearlinux/hello/world": 1,
         }
     }
+    # Custom Payload transformations
+    # POST_PROCESSING_PARSERS = ["demo"]
 
 
 class Testing(Config):
