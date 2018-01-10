@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-import json
 from operator import itemgetter
 from collections import namedtuple
 import subprocess
@@ -189,7 +188,7 @@ def find_guilty(backtrace):
             guilty['count'] = 1
 
             found_match = True
-            return (guilty, found_match)
+            return guilty, found_match
 
         elif in_backtrace:
             # We have processed the entire backtrace for the crashing thread of
@@ -212,7 +211,7 @@ def find_guilty(backtrace):
         guilty['count'] = 1
         found_match = True
 
-    return (guilty, found_match)
+    return guilty, found_match
 
 
 def _process_guilties(args):
@@ -285,7 +284,7 @@ def guilty_list_per_build(guilties):
         if found_entry:
             continue
 
-        entry = {}
+        entry = dict()
         entry['guilty'] = guilty_str
         entry['total'] = count
         entry['guilty_id'] = guilty_id
@@ -325,7 +324,7 @@ def guilty_list_per_build(guilties):
     for i, b in enumerate(newlist):
         newlist[i]['builds'] = sorted(newlist[i]['builds'], key=lambda b: int(b[0]), reverse=True)
 
-    return (buildlist, newlist)
+    return buildlist, newlist
 
 
 def guilty_list_for_build(guilties, filter='overall'):
@@ -345,7 +344,7 @@ def guilty_list_for_build(guilties, filter='overall'):
             continue
 
         if filter in ['overall', build]:
-            entry = {}
+            entry = dict()
             entry['guilty'] = guilty_str
             entry['total'] = count
             entry['guilty_id'] = guilty_id
@@ -361,7 +360,6 @@ def guilty_list_for_build(guilties, filter='overall'):
 def get_all_funcmods():
     frame_regex = re.compile(frame_pattern)
     funcmodset = set()
-    funcmodlist = []
     backtraces = Record.get_crash_backtraces(classes=get_backtrace_classes())
 
     for b in backtraces:
