@@ -382,3 +382,9 @@ The telemetrics-backend project is licensed under the Apache License, Version
 2.0. The full license text is found in the LICENSE file, and individual source
 files contain the boilerplate notice described in the appendix of the LICENSE
 file.
+
+
+## Security Disclosures
+
+To report a security issue or receive security advisories please follow procedures
+in this [link](https://01.org/security).
