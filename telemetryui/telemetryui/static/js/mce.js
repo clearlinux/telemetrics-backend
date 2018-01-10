@@ -61,6 +61,7 @@
         };
 
         rootObj.newChart(ctx, "bar", data, options);
+    }
 
 
 
