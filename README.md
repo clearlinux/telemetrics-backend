@@ -142,6 +142,15 @@ At minimum, make sure that your telemetrics-client configuration in
 `example.com`, the client config should contain `server=http://example.com/` or
 `server=http://example.com/v2/collector`.
 
+
+## `collector` collector plugable payload parsers
+
+By default `collector` will save the payload record from telemetry messages as is
+received, there are cases when is desirable to apply additional transformations to
+payload on selected classifications. This use case is covered by custom payload
+parsers/(or transformations). For more information on this feature read specific
+[documentation](/collector/collector/parsers/README.md)
+
 ## `telemetryui` views
 
 The `telemetryui` app is a web app that exposes several views to visualize the
