@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+import itertools
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.sql.expression import cast
 from sqlalchemy.sql.expression import desc
@@ -351,17 +352,18 @@ class Record(db.Model):
         return q.all()
 
     @staticmethod
+    def expand_class(D):
+        A, B, C = D
+        return ["{}/*".format(A), "{}/{}/*".format(A, B), "{}/{}/{}".format(A, B, C)]
+
+    @staticmethod
     def get_classifications(with_regex=False):
         q = db.session.query(Classification.classification)
-        q = q.order_by(Classification.classification)
         if with_regex:
-            cs_regex = [cs[0] for cs in q.all()]
-            parts = ["{0}/{1}".format(cs.split("/")[0], cs.split("/")[1]) for cs in cs_regex]
-            parts.extend([cs.split("/")[0] for cs in parts])
-            cs_regex.extend([x + "/*" for x in set([cs for cs in parts if parts.count(cs) > 1])])
-            cs_regex.sort()
-            return cs_regex
-        return q.all()
+            classes = [Record.expand_class(c[0].split('/')) for c in q.all()]
+            return sorted(set(itertools.chain(*classes)))
+        else:
+            return q.all()
 
     @staticmethod
     def get_os_map():
