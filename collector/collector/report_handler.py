@@ -118,12 +118,11 @@ def collector_post_handler():
     kernel_version = request.headers.get("Kernel-Version")
     validate_header_value(kernel_version, "kernel_version", "kernel version is invalid")
 
-    if record_format_version == '2':
-        board_name = "N/A"
-        cpu_model = "N/A"
-        bios_version = "N/A"
+    board_name = "N/A"
+    cpu_model = "N/A"
+    bios_version = "N/A"
 
-    elif record_format_version == '3':
+    if record_format_version >= '3':
         board_name = request.headers.get("Board-Name")
         validate_header_value(board_name, "board_name", "board name is invalid")
 
@@ -132,10 +131,6 @@ def collector_post_handler():
 
         bios_version = request.headers.get("Bios-Version")
         validate_header_value(bios_version, "bios_version", "BIOS version is invalid")
-    else:
-        board_name = ""
-        cpu_model = ""
-        bios_version = ""
 
     os_name = request.headers.get('System-Name')
     os_name = os_name.replace('"', '').replace("'", "")
