@@ -23,6 +23,7 @@ from .jinja_filters import (
     timesince,
     local_datetime_since,
     basename,
+    get_severity_label
     )
 import importlib
 
@@ -57,6 +58,7 @@ app.jinja_env.globals['url_for_other_page'] = url_for_other_page
 app.add_template_filter(timesince)
 app.add_template_filter(local_datetime_since)
 app.add_template_filter(basename)
+app.add_template_filter(get_severity_label)
 app.add_template_filter(_plugin_metadata())
 
 

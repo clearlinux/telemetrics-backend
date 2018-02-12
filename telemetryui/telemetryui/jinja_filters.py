@@ -61,4 +61,12 @@ def basename(path):
 def plugin_metadata(name):
     return name.title()
 
+
+def get_severity_label(severity):
+    return {
+        2: ("info", "med",),
+        3: ("warning", "high",),
+        4: ("danger", "crit",)
+    }.get(severity, ("default", "low",))
+
 # vi: ts=4 et sw=4 sts=4
