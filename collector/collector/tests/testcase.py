@@ -36,6 +36,7 @@ cpu_model = 'Cpu-Model'
 bios_version = 'Bios-Version'
 system_name = 'System-Name'
 payload_version = 'Payload-Format-Version'
+event_id = 'Event-Id'
 
 
 REQUIRED_HEADERS_V1 = (
@@ -86,6 +87,15 @@ def get_record_v3():
 
     })
     return v3
+
+
+def get_record_v4():
+    v4 = get_record_v3()
+    v4.update({
+        record_version: 4,
+        event_id: '39cc109a1079df96376693ebc7a0f632',
+    })
+    return v4
 
 
 def get_record():

@@ -33,9 +33,11 @@ from collector.tests.testcase import (
     bios_version,
     system_name,
     payload_version,
+    event_id,
     get_record_v1,
     get_record_v2,
-    get_record_v3,)
+    get_record_v3,
+    get_record_v4,)
 
 
 class TestHandlerRecordV2(RecordTestCases):
@@ -143,6 +145,23 @@ class TestHandlerRecordV3(RecordTestCases):
 
     def test_post_missing_bios_version(self):
         self.missing_header('Bios-Version', bios_version)
+
+
+class TestHandlerRecordV4(RecordTestCases):
+    """
+       Test record v4
+    """
+    @staticmethod
+    def get_version_records():
+        return get_record_v4()
+
+    def test_post_record_v4(self):
+       headers = get_record_v4()
+       response = self.client.post('/', headers=headers, data='test')
+       self.assertTrue(response.status_code == 201, response.data.decode('utf-8'))
+
+    def test_post_missing_eid(self):
+       self.missing_header('Event-Id', event_id)
 
 
 if __name__ == '__main__' and __package__ is None:

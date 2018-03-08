@@ -80,6 +80,12 @@ def validate_header_value(header_value, record_name, err_msg):
     raise InvalidUsage(err_msg, 400)
 
 
+def validate_record_v3_headers(board_name, cpu_model, bios_version):
+    validate_header_value(board_name, "board_name", "board name is invalid")
+    validate_header_value(cpu_model, "cpu_model", "cpu model is invalid")
+    validate_header_value(bios_version, "bios_version", "BIOS version is invalid")
+
+
 def collector_post_handler():
 
     # The collector only accepts records with the configured TID value.
@@ -118,19 +124,21 @@ def collector_post_handler():
     kernel_version = request.headers.get("Kernel-Version")
     validate_header_value(kernel_version, "kernel_version", "kernel version is invalid")
 
+    # Record V3 format headers
     board_name = "N/A"
     cpu_model = "N/A"
     bios_version = "N/A"
-
     if record_format_version >= '3':
         board_name = request.headers.get("Board-Name")
-        validate_header_value(board_name, "board_name", "board name is invalid")
-
         cpu_model = request.headers.get("Cpu-Model")
-        validate_header_value(cpu_model, "cpu_model", "cpu model is invalid")
-
         bios_version = request.headers.get("Bios-Version")
-        validate_header_value(bios_version, "bios_version", "BIOS version is invalid")
+        validate_record_v3_headers(board_name, cpu_model, bios_version)
+
+    # Record V4 format headers
+    event_id = "N/A"
+    if record_format_version >= '4':
+        event_id = request.headers.get("Event-Id")
+        validate_header_value(event_id, "event_id", "Event id is invalid")
 
     os_name = request.headers.get('System-Name')
     os_name = os_name.replace('"', '').replace("'", "")
@@ -176,7 +184,7 @@ def collector_post_handler():
 
     db_rec = Record.create(machine_id, host_type, severity, db_class, db_build, architecture, kernel_version,
                            record_format_version, ts_capture, ts_reception, payload_format_version, os_name,
-                           board_name, bios_version, cpu_model, external, payload)
+                           board_name, bios_version, cpu_model, event_id, external, payload)
 
     if is_crash_classification(classification):
         # must pass args as bytes to uwsgi under Python 3
