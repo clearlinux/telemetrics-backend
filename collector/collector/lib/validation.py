@@ -1,5 +1,5 @@
 #
-# Copyright 2015-2017 Intel Corporation
+# Copyright 2015-2018 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,11 +42,15 @@ REQUIRED_HEADERS_V3 = REQUIRED_HEADERS_V2 + (
     'Cpu-Model',
 )
 
+REQUIRED_HEADERS_V4 = REQUIRED_HEADERS_V3 + (
+     'Event-Id',
+)
+
 # see config.py for the meaning of this value
 TELEMETRY_ID = app.config.get("TELEMETRY_ID", "6907c830-eed9-4ce9-81ae-76daf8d88f0f")
 
 SEVERITY_VALUES = [1, 2, 3, 4]
-VALID_RECORD_FORMAT_VERSIONS = [1, 2, 3]
+VALID_RECORD_FORMAT_VERSIONS = [1, 2, 3, 4]
 POSTGRES_INT_MAX = 2147483647
 MAXLEN_PRINTABLE = 200
 
@@ -100,13 +104,16 @@ def record_format_version_validation(record_format_version):
 
 def record_format_version_headers_validation(record_format_version, headers):
     # Validate required headers based on Record Version
-    if int(record_format_version) == 1:
-        return validate_headers(headers, REQUIRED_HEADERS_V1)
-    elif int(record_format_version) == 2:
-        return validate_headers(headers, REQUIRED_HEADERS_V2)
-    elif int(record_format_version) == 3:
-        return validate_headers(headers, REQUIRED_HEADERS_V3)
-    return False
+    req_headrs = {
+        '1': REQUIRED_HEADERS_V1,
+        '2': REQUIRED_HEADERS_V2,
+        '3': REQUIRED_HEADERS_V3,
+        '4': REQUIRED_HEADERS_V4,
+    }
+    reqs = req_headrs.get(record_format_version, None)
+    if reqs is None:
+        return False
+    return validate_headers(headers, reqs)
 
 
 def validation_tid_header(tid):
@@ -165,6 +172,10 @@ def validate_record_limit(limit):
     return is_a_number(limit) and limit <= MAX_NUM_RECORDS
 
 
+def validate_event_id(header_value):
+    return len(header_value) == 32 and len([v for v in header_value if v in "0123456789abcdef"]) == 32
+
+
 def validate_header(name, value, expected=None):
     if expected is None:
         return {
@@ -182,6 +193,7 @@ def validate_header(name, value, expected=None):
             'cpu_model': validate_x_header,
             'bios_version': validate_x_header,
             'build': validate_x_header,
+            'event_id': validate_event_id,
         }.get(name, lambda x: False)(value)
     else:
         return value == expected
