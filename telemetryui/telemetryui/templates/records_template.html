@@ -18,17 +18,18 @@
     {{ helpers.render_pagination(records) }}
 
     <h3>Records found: {{ records.total }}</h3>
-    <table class="table table-hover table-condensed text-nowrap">
+    <table class="table table-hover table-condensed text-nowrap telem-records">
         <thead>
-            <th>Id</th>
-            <th>Source</th>
-            <th>Machine ID</th>
-            <th>When</th>
-            <th>Severity</th>
-            <th class="ellipsize">Classification</th>
-            <th>OS</th>
-            <th>Ver</th>
-            <th>Payload</th>
+            <th class="row-id">Id</th>
+            <th class="row-source">Source</th>
+            <th class="row-machine-id">Machine ID</th>
+            <th class="row-when">When</th>
+            <th class="row-severity">Severity</th>
+            <th class="row-class ellipsize">Classification</th>
+            <th class="row-os">OS</th>
+            <th class="row-version">Ver</th>
+            <th class="row-payload ellipsize">Payload</th>
+            <th class="row-button"></th>
         </thead>
         <tbody>
         {% for rec in records.items %}
@@ -45,9 +46,9 @@
                 <td class="ellipsize">{{ rec.classification.classification|replace("org.clearlinux/", "") }}</td>
                 <td>{{ rec.os_name }}</td>
                 <td>{{ rec.build.build }}</td>
-                <td><div class="payload_container"><div class="payload">{{ rec.backtrace }}</div>
-                        <button id="more_button" type="button" data-toggle="modal" data-target="#myModal" data-whatever="{{ rec.backtrace }}">...</button>
-                    </div>
+                <td class="ellipsize row-payload">{{ rec.backtrace }}</td>
+                <td>
+                    <button id="more_button" type="button" data-toggle="modal" data-target="#myModal" data-whatever="{{ rec.backtrace }}">...</button>
                 </td>
             </tr>
         {% endfor %}

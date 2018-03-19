@@ -2,10 +2,8 @@
 	overflow: hidden;
     	text-overflow: ellipsis;
 	white-space: nowrap;
-        max-width: 480px;
 	float:left;
 	color:blue;
-	width:95%;
 }
 
 .machine_id {
@@ -23,9 +21,8 @@
 }
 
 #more_button {
-    float: right;
     color: red;
-    width: 5%;
+    float: right;
 }
 
 #records_page_div{
@@ -80,4 +77,53 @@ div.series-legend {
     width: 30px;
     margin-right: 5px;
     background-color: #E0E0E0;
+}
+
+/* Records table */
+table.telem-records {
+    table-layout: fixed;
+}
+
+th.row-id {
+    width: 5%
+}
+
+th.row-source {
+    width: 5%;
+}
+
+th.row-machine-id {
+    width: 17%;
+}
+
+th.row-when {
+    width: 8%;
+}
+
+th.row-severity {
+    width: 7%;
+}
+
+th.row-class {
+    width: 15%;
+}
+
+th.row-os {
+    width: 8%;
+}
+
+th.row-version {
+    width: 5%;
+}
+
+th.row-payload {
+    width: 25%;
+}
+
+th.row-button {
+    width: 5%;
+}
+
+td.row-payload {
+    color: blue;
 }
