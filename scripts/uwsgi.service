@@ -6,8 +6,7 @@ After=network.target
 User=@@nginx_user@@
 Group=@@nginx_group@@
 Environment="LOGTO=/var/log/uwsgi/emperor.log"
-Environment="PATH=@@install_path@@venv/bin/uwsgi"
-ExecStart=@@install_path@@venv/bin/uwsgi --master --emperor /etc/uwsgi/vassals --die-on-term --uid @@nginx_user@@ --gid @@nginx_group@@ --logto ${LOGTO}
+ExecStart=@@uwsgi_bin_path@@ --master --emperor /etc/uwsgi/vassals --die-on-term --uid @@nginx_user@@ --gid @@nginx_group@@ --logto ${LOGTO}
 
 [Install]
 WantedBy=multi-user.target

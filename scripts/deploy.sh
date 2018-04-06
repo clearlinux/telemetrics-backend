@@ -16,9 +16,9 @@
 #
 
 REMOTE_APP_DIR="/var/www/telemetry"
-DEBIAN_PKGS="build-essential python3 python3-dev python3-pip python3-virtualenv libpq-dev nginx git"
-REDHAT_PKGS="gcc gcc-c++ make python34 python34-devel python34-pip python34-virtualenv postgresql-devel postgresql-server postgresql-contrib nginx git policycoreutils-python"
-CLR_BUNDLES="application-server database-basic database-basic-dev python-basic os-clr-on-clr os-core-dev web-server-basic"
+DEBIAN_PKGS="build-essential python3 python3-dev python3-pip virtualenv libpq-dev nginx git uwsgi uwsgi-plugin-python3"
+REDHAT_PKGS="gcc gcc-c++ make python34 python34-devel python34-pip python34-virtualenv postgresql-devel postgresql-server postgresql-contrib nginx git policycoreutils-python uwsgi uwsgi-plugin-python3"
+CLR_BUNDLES="application-server database-basic database-basic-dev python-basic os-core-dev web-server-basic"
 DB_PASSWORD=""
 NGINX_USER=""
 NGINX_GROUP=""
@@ -198,6 +198,7 @@ do_migrate() {
 
 _install_ubuntu_reqs() {
   set_proxy
+  sudo https_proxy=$https_proxy apt-get update
   sudo https_proxy=$https_proxy $APT_GET_INSTALL $DEBIAN_PKGS
   sudo https_proxy=$https_proxy pip3 install uwsgitop
 }
@@ -210,6 +211,7 @@ _install_clr_reqs() {
 
 _install_centos_reqs() {
   set_proxy
+  sudo https_proxy=$https_proxy yum check-update
   sudo https_proxy=$https_proxy $YUM_INSTALL epel-release
   sudo https_proxy=$https_proxy $YUM_INSTALL $REDHAT_PKGS
   sudo https_proxy=$https_proxy pip3 install uwsgitop
@@ -233,7 +235,6 @@ python-dateutil==2.6.1
 python-editor==1.0.3
 six==1.10.0
 SQLAlchemy==1.1.13
-uWSGI==2.0.15
 Werkzeug==0.12.2
 WTForms==2.1
 EOF
@@ -344,6 +345,7 @@ s|@@db_password@@|$DB_PASSWORD|
 s|@@nginx_user@@|$NGINX_USER|
 s|@@nginx_group@@|$NGINX_GROUP|
 s|@@flask_key@@|$FLASK_KEY|
+s|@@uwsgi_bin_path@@|$UWSGI_PATH|
 EOF
 
   sed -i.backup -f "$tmp" $source
@@ -472,6 +474,8 @@ _deploy() {
   _subst_config "$scripts_path/$TELEMETRYUI_INI" "$telemetryui_path/"
   _subst_config "$scripts_path/uwsgi.conf"
   _subst_config "$scripts_path/sites_nginx.conf"
+  # get uwsgi location, in case this was installed during script exec
+  UWSGI_PATH=$(type -p uwsgi)
   _subst_config "$scripts_path/uwsgi.service"
 
   # Finalize configuration for postgres
