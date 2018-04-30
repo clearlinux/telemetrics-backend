@@ -168,6 +168,7 @@ class Record(db.Model):
 
     def to_dict(self):
         record = {
+            'id': self.id,
             'machine_id': self.machine_id,
             'machine_type': self.machine,
             'arch': self.architecture,
@@ -183,6 +184,7 @@ class Record(db.Model):
             'bios_version': self.bios_version,
             'cpu_model': self.cpu_model,
             'event_id': self.event_id,
+            'external': self.external,
         }
         return record
 
@@ -220,7 +222,8 @@ class Record(db.Model):
             raise
 
     @staticmethod
-    def query_records(build, classification, severity, machine_id, limit, interval_sec=None):
+    def query_records(build, classification, severity, machine_id, limit,
+                      interval_sec=None, ts_capture=None, from_id=None):
         records = Record.query
         if build is not None:
             records = records.join(Record.build).filter_by(build=build)
@@ -230,6 +233,10 @@ class Record(db.Model):
             records = records.filter(Record.severity == severity)
         if machine_id is not None:
             records = records.filter(Record.machine_id == machine_id)
+        if from_id is not None:
+            records = records.filter(Record.id >= from_id)
+        if ts_capture is not None:
+            records = records.filter(Record.tsp > ts_capture)
 
         if interval_sec is not None:
             current_time = time()

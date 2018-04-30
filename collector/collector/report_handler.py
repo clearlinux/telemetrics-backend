@@ -245,6 +245,14 @@ def get_records_api_handler():
     if created_in_sec is not None:
         validate_query_value(created_in_sec, "created_in_sec", "Created (in seconds) value is invalid")
 
+    from_id = request.args.get('from_id', None)
+    if from_id is not None:
+         validate_query_value(from_id, "id", "Provided record id value is invalid")
+
+    ts_capture = request.args.get('ts_capture', None)
+    if ts_capture is not None:
+         validate_query_value(ts_capture, "ts_capture", "Time stamp from record capture")
+
     limit = request.args.get('limit', MAX_NUM_RECORDS)
     if limit != MAX_NUM_RECORDS:
         validate_query_value(limit, "limit", "Record limit value is invalid")
@@ -261,7 +269,8 @@ def get_records_api_handler():
     if interval_sec is not None and interval_sec > MAX_INTERVAL_SEC:
         interval_sec = MAX_INTERVAL_SEC
 
-    records = Record.query_records(build, classification, severity, machine_id, limit, interval_sec)
+    records = Record.query_records(build, classification, severity, machine_id, limit, interval_sec,
+                                   from_id=from_id, ts_capture=ts_capture)
     record_list = [Record.to_dict(rec) for rec in records]
 
     return jsonify(records=record_list)

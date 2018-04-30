@@ -201,6 +201,8 @@ def validate_header(name, value, expected=None):
 
 def validate_query(name, value):
     return {
+        'id': is_a_number,
+        'ts_capture': is_a_number,
         'severity': validate_severity,
         'classification': validate_classification,
         'build': validate_x_header,
