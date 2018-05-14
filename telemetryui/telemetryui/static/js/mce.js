@@ -26,7 +26,9 @@
 
         var dataSet = [];
         var counter = 0
-        for(var label in data){
+        var weekList = Object.keys(data).sort(function(a, b) {return a - b;});
+        for(var weekIndex in weekList){
+            var label = weekList[weekIndex];
             dataSet.push({
               label: "Week "+label,
               backgroundColor: rootObj.backgroundColors[counter%14],
