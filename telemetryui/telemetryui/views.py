@@ -471,7 +471,8 @@ def mce():
         week_rec_map[record.classification.classification][week] += 1
         class_rec_map.setdefault(record.classification.classification, 0)
         class_rec_map[record.classification.classification] += 1
-        by_machine_id.setdefault(record.machine_id, {"builds": {record.build.build: 0}, "recordscnt": 0})
+        by_machine_id.setdefault(record.machine_id, {"builds": {}, "recordscnt": 0})
+        by_machine_id[record.machine_id]["builds"].setdefault(record.build.build, 0)
         by_machine_id[record.machine_id]["builds"][record.build.build] += 1
         by_machine_id[record.machine_id]["recordscnt"] += 1
         by_builds.setdefault(record.build.build, 0)
