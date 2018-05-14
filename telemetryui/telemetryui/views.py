@@ -458,7 +458,7 @@ def mce():
         "org.clearlinux/mce/SRAR",
         "org.clearlinux/mce/UCNA",
     ]
-    records = Record.filter_records(None, mce_classes, None).all()
+    records = Record.filter_records(None, mce_classes, None, from_date="{}-01-01".format(datetime.datetime.now().year)).all()
     top10 = []
     maxcnt = 0
     by_machine_id = {}
