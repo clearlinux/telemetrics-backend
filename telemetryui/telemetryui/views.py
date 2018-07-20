@@ -62,7 +62,7 @@ def records(page=1):
     cl = session.get('severity')
 
     os_map = Record.get_os_map()
-    form.os_name.choices = [("All", "All")] + [(n, n) for n in os_map.keys()]
+    form.system_name.choices = [("All", "All")] + [(n, n) for n in os_map.keys()]
 
     form.machine_id.default = ""
 
@@ -81,7 +81,7 @@ def records(page=1):
             return render_template('records.html', records=out_records, form=form)
         else:
             classification = request.form.get('classification')
-            os_name = request.form.get('os_name')
+            system_name = request.form.get('system_name')
             build = request.form.get('build')
             severity = request.form.get('severity')
             page_size = request.form.get('page_size')
@@ -94,7 +94,7 @@ def records(page=1):
 
             redirect_args = {
                 "page_size": page_size if page_size != "" else None,
-                "os_name": os_name if os_name != "All" else None,
+                "system_name": system_name if system_name != "All" else None,
                 "build": build if build != "All" else None,
                 "severity": severity if severity != "All" else None,
                 "classification": classification if classification != "All" else None,
@@ -122,7 +122,7 @@ def records(page=1):
 
     elif request.method == 'GET':
         classification = request.args.get('classification')
-        os_name = request.args.get('os_name')
+        system_name = request.args.get('system_name')
         build = request.args.get('build')
         severity = request.args.get('severity')
         page_size = request.args.get('page_size')
@@ -137,8 +137,8 @@ def records(page=1):
             form.classification.default = classification
         if build is not None:
             form.build.default = build
-        if os_name is not None:
-            form.os_name.default = os_name
+        if system_name is not None:
+            form.system_name.default = system_name
         if severity is not None:
             form.severity.default = severity
         if machine_id is not None:
@@ -160,7 +160,7 @@ def records(page=1):
             page_size = RECORDS_PER_PAGE
         elif int(page_size) > MAX_RECORDS_PER_PAGE:
             page_size = MAX_RECORDS_PER_PAGE
-        out_records = Record.filter_records(build, classification, severity, machine_id, os_name=os_name,
+        out_records = Record.filter_records(build, classification, severity, machine_id, system_name=system_name,
                                             payload=payload, not_payload=not_payload, data_source=data_source,
                                             from_date=from_date, to_date=to_date).paginate(page, int(page_size), False)
         return render_template('records.html', records=out_records, form=form, os_map=json.dumps(os_map))
@@ -466,17 +466,17 @@ def mce():
     week_rec_map = {}
     class_rec_map = {}
     for record in records:
-        week = time.strftime("%U", time.localtime(int(record.tsp)))
-        week_rec_map.setdefault(record.classification.classification, {}).setdefault(week, 0)
-        week_rec_map[record.classification.classification][week] += 1
-        class_rec_map.setdefault(record.classification.classification, 0)
-        class_rec_map[record.classification.classification] += 1
+        week = time.strftime("%U", time.localtime(int(record.timestamp_client)))
+        week_rec_map.setdefault(record.classification, {}).setdefault(week, 0)
+        week_rec_map[record.classification][week] += 1
+        class_rec_map.setdefault(record.classification, 0)
+        class_rec_map[record.classification] += 1
         by_machine_id.setdefault(record.machine_id, {"builds": {}, "recordscnt": 0})
-        by_machine_id[record.machine_id]["builds"].setdefault(record.build.build, 0)
-        by_machine_id[record.machine_id]["builds"][record.build.build] += 1
+        by_machine_id[record.machine_id]["builds"].setdefault(record.build, 0)
+        by_machine_id[record.machine_id]["builds"][record.build] += 1
         by_machine_id[record.machine_id]["recordscnt"] += 1
-        by_builds.setdefault(record.build.build, 0)
-        by_builds[record.build.build] += 1
+        by_builds.setdefault(record.build, 0)
+        by_builds[record.build] += 1
     for machine_id in list(by_machine_id.keys()):
         builds_cnt = by_machine_id[machine_id]["builds"]
         maxcnt = max(list(builds_cnt.values()) + [maxcnt])
@@ -501,8 +501,8 @@ def thermal():
     week_rec_map = {}
     year_start = time.mktime(time.strptime(current_year + "000", "%Y%U%w"))
     for r in records:
-        if r.tsp >= year_start:
-            week = str(int((r.tsp - year_start) / 604800) + ((r.tsp - year_start) % 604800 > 0))
+        if r.timestamp_client >= year_start:
+            week = str(int((r.timestamp_client - year_start) / 604800) + ((r.timestamp_client - year_start) % 604800 > 0))
             if week in week_rec_map:
                 week_rec_map[week] += 1
             else:

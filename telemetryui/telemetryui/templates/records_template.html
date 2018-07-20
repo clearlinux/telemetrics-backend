@@ -41,14 +41,14 @@
                 <td>internal</td>
                 {%- endif %}
                 <td><span data-toggle="tooltip" data-placement="top" title="{{ rec.machine_id }}"><div class="machine_id">{{ rec.machine_id }}</div></span></td>
-                <td>{{ rec.tsp_server | timesince }}</td>
+                <td>{{ rec.timestamp_server | int | timesince }}</td>
                 <td><span class="label label-{{ (rec.severity | get_severity_label).0 }}">{{ (rec.severity | get_severity_label).1 }}</span></td>
-                <td class="ellipsize">{{ rec.classification.classification|replace("org.clearlinux/", "") }}</td>
-                <td>{{ rec.os_name }}</td>
-                <td>{{ rec.build.build }}</td>
-                <td class="ellipsize row-payload">{{ rec.backtrace }}</td>
+                <td class="ellipsize">{{ rec.classification|replace("org.clearlinux/", "") }}</td>
+                <td>{{ rec.system_name }}</td>
+                <td>{{ rec.build }}</td>
+                <td class="ellipsize row-payload">{{ rec.payload }}</td>
                 <td>
-                    <button id="more_button" type="button" data-toggle="modal" data-target="#myModal" data-whatever="{{ rec.backtrace }}">...</button>
+                    <button id="more_button" type="button" data-toggle="modal" data-target="#myModal" data-whatever="{{ rec.payload }}">...</button>
                 </td>
             </tr>
         {% endfor %}

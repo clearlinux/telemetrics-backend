@@ -22,8 +22,8 @@
             {{ form.hidden_tag() }}
             <div class="form-group row">
                 <div class="col-sm-3">
-                    {{ form.os_name.label(class="control-label", for="os_name") }}
-                    {{ form.os_name(id="os_name", class="form-control") }}
+                    {{ form.system_name.label(class="control-label", for="system_name") }}
+                    {{ form.system_name(id="system_name", class="form-control") }}
                 </div>
                 <div class="col-sm-3" >
                     {{ form.build.label(class="control-label" , for="build_id") }}
@@ -86,11 +86,11 @@
                     }
                 });
             }
-            $(document).on('change', 'select#os_name', function () {
+            $(document).on('change', 'select#system_name', function () {
                 $('select#build_id').val("All")
                 selectBuilds($(this).val());
             });
-            selectBuilds($('select#os_name').val());
+            selectBuilds($('select#system_name').val());
         </script>
     {% endblock %}
     {% include "records_template.html" %}

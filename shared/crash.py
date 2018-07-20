@@ -232,12 +232,12 @@ def _process_guilties(args):
         crashes = Record.get_new_crash_records(classes=get_backtrace_classes(), id=record_id)
         filters = GuiltyBlacklist.get_guilties()
         for rec in crashes:
-            if rec.backtrace:
-                new_bt = demangle_backtrace(rec.backtrace)
-                rec.backtrace = new_bt
+            if rec.payload:
+                new_bt = demangle_backtrace(rec.payload)
+                rec.payload = new_bt
                 # TODO: update the rec.payload field as well
                 Record.commit_guilty_changes()
-                g, match = find_guilty(rec.backtrace)
+                g, match = find_guilty(rec.payload)
                 if match:
                     function = g['function']
                     module = g['module']
