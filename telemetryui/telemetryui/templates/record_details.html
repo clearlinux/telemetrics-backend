@@ -29,10 +29,10 @@
     <dd><a  href="{{ url_for('records', page=1, machine_id=record.machine_id) }}">{{  record.machine_id }}</a></dd>
 
     <dt>Machine Type</dt>
-    <dd>{{ record.machine }}</dd>
+    <dd>{{ record.host_type }}</dd>
 
     <dt>Operating System</dt>
-    <dd>{{ record.os_name }}</dd>
+    <dd>{{ record.system_name }}</dd>
 
     <dt>Kernel Version</dt>
     <dd>{{ record.kernel_version }}</dd>
@@ -50,19 +50,19 @@
     <dd>{{ record.cpu_model if record.cpu_model else 'N/A'}}</dd>
 
     <dt>Record Time</dt>
-    <dd>{{ record.tsp|local_datetime_since }}</dd>
+    <dd>{{ record.timestamp_client|local_datetime_since }}</dd>
 
     <dt>Server Time</dt> 
-    <dd>{{ record.tsp_server|local_datetime_since }} </dd>
+    <dd>{{ record.timestamp_server|local_datetime_since }} </dd>
 
     <dt>Build</dt>
-    <dd><a href="{{ url_for('records', page=1, build=record.build.build) }}">{{ record.build.build }}</a></dd>
+    <dd><a href="{{ url_for('records', page=1, build=record.build) }}">{{ record.build }}</a></dd>
 
     <dt>Severity</dt>
     <dd><a href="{{ url_for('records', page=1, severity=record.severity) }}">{{ record.severity }}</a></dd>
 
     <dt>Classification</dt>
-    <dd><a id="class_link" href="{{ url_for('records', page=1, classification=record.classification.classification) }}">{{ record.classification.classification }}</a></dd>
+    <dd><a id="class_link" href="{{ url_for('records', page=1, classification=record.classification) }}">{{ record.classification }}</a></dd>
 
     <dt>Guilty Id</dt>
     <dd>
@@ -73,14 +73,14 @@
         {%- endif %}
     </dd>
 
-    <dt>Payload Format Version</dt>
-    <dd>{{ record.payload_format_version }}</dd>
+    <dt>Payload Version</dt>
+    <dd>{{ record.payload_version }}</dd>
 
     <dt>External</dt>
     <dd>{{ record.external }}</dd>
 
     <dt>Payload</dt>
-    <dd> <pre class="prettyprint">{{ record.backtrace }}</pre></dd>
+    <dd> <pre class="prettyprint">{{ record.payload }}</pre></dd>
 
 </dl>
 {% endblock %}

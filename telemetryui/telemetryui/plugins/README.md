@@ -118,7 +118,7 @@ class Config(object):
     DEBUG = True
     TESTING = False
     LOG_LEVEL = logging.ERROR
-    SQLALCHEMY_DATABASE_URI = 'postgres://postgres:postgres@localhost/telemdb'
+    SQLALCHEMY_DATABASE_URI = 'postgres://postgres:postgres@localhost/telemetry'
     SQLALCHEMY_TRACK_MODIFICATIONS = True
     LOG_FILE = 'telemetryui.log'
     WTF_CSRF_ENABLED = True

@@ -7,8 +7,7 @@ This project provides the server-side component of a complete telemetrics
 client-side component source repository lives at
 https://github.com/clearlinux/telemetrics-client.
 
-It consists of two Flask applications: an ingestion app, `collector`, for
-records received from telemetrics-client probes; and a web app, `telemetryui`,
+It consists of a Flask application `telemetryui`,
 that exposes several views to visualize the telemetry data. The `telemetryui`
 app also provides a REST API to perform queries on the data.
 
@@ -39,8 +38,8 @@ applications.
 To control access to the applications, it is recommended that system
 administrators leverage web server authentication.
 
-Regarding alternate deployment scenarios, one might want to host the collector,
-telemetryui, and database on three separate servers/VMs; and implement network
+Regarding alternate deployment scenarios, one might want to host the telemetryui
+and database on three separate servers/VMs; and implement network
 access controls for these systems. The in-tree deployment script does not
 support these types of deployments, but with minimal modification to the
 source, they should be possible.
@@ -99,7 +98,7 @@ $ ./deploy.sh -H localhost -d clr -a install
 During script execution, you will be prompted for user input:
 
 * The first prompt begins with "DB password:", asking for a password to set for
-  the `telemdb` database. If you do not enter a value before pressing ENTER,
+  the `telemetry` database. If you do not enter a value before pressing ENTER,
   the password will be `postgres`.
 
 * If your sudo access requires a password, you will be prompted for that
@@ -125,32 +124,6 @@ working with. Its default value is the upstream repo location on
 github.com/clearlinux. The `-s` option lets you select a different git branch
 to install/deploy from rather than "master", the default value.
 
-## `collector` operation
-
-The `collector` app is an ingestion app that handles POST requests to `/`
-or `/v2/collector` at the web server location where telemetrics-backend has
-been installed. The requests are analyzed to make sure required header fields
-are present and that values are correct.
-
-Generally, the POST requests are sent by probes from the telemetrics-client,
-since these probes use the client library, libtelemetry, to create well-formed
-records capable of being processed by telemetrics-backend.
-
-At minimum, make sure that your telemetrics-client configuration in
-`/etc/telemetrics/telemetrics.conf` specifies the correct server URL for the
-`server` config option. For example, if telemetrics-backend is hosted at
-`example.com`, the client config should contain `server=http://example.com/` or
-`server=http://example.com/v2/collector`.
-
-
-## `collector` plugable payload parsers
-
-By default `collector` will save the payload record from telemetry messages as is
-received, there are cases when is desirable to apply additional transformations to
-payload on selected classifications. This use case is covered by custom payload
-parsers/(or transformations). For more information on this feature read specific
-[documentation](/collector/collector/parsers/README.md)
-
 ## `telemetryui` views
 
 The `telemetryui` app is a web app that exposes several views to visualize the
@@ -158,7 +131,7 @@ telemetry data and also provides a REST API to perform queries on record data.
 
 The current views are:
 
-* Records view - a paginated list of all records in the `telemdb` database that
+* Records view - a paginated list of all records in the `telemetry` database that
   have been accepted by the `collector`. The records are presented in tabular
   format and the columns map to select fields from the `records` database table.
   At the top of the view, an HTML form can be used for "advanced searches",
@@ -189,8 +162,7 @@ The current views are:
   reports are grouped by "guilties"; a guilty is a frame from a crash backtrace
   chosen as the best candidate for the cause of the crash. The logic for
   determining crash record guilty frames accepts user input; the user can
-  identify which frames in a backtrace are never guilty. Guilty processing occurs
-  asychronously in a uWSGI spooler process for the `collector` app.
+  identify which frames in a backtrace are never guilty.
 
 * MCE view - charts that display MCE (machine check exception) data from a
   patched version of `mcelog` that uses libtelemetry to create and send
@@ -228,24 +200,6 @@ go to relevant documentation.
 
 ## Special configuration
 
-### Configuring the `collector` TID
-
-The `collector` requires a Telemetry ID (TID) header value set with the HTTP
-header `X-Telemetry-TID`. The telemetrics-client daemon adds this header to
-telemetry records, and its default value is used for identifying records from
-Clear Linux OS systems.
-
-However, when you are deploying your own instance of telemetrics-backend and
-have deployed telemetrics-client to systems configured to send records to this
-instance, it is recommended to generate your own random TID (e.g. using the
-`uuidgen` program). Once you have generated a TID, the following steps are needed:
-
-* Configure telemetrics-client to add this TID to records by modifying the
-  `tidheader` value in `/etc/telemetrics/telemetrics.conf` on systems sending
-  the telemetry data to your `collector`.
-* Configure your `collector` app to accept records with this TID by modifying
-  `collector/collector/config.py`.
-
 ### Configuring nginx for TLS
 
 The `sites_nginx.conf` config file is already enabled to accept TLS connections
@@ -261,16 +215,6 @@ If the certificates are not preinstalled, the `deploy.sh` script will simply
 comment out TLS-related nginx configuration. Specifically, it will comment out
 the `listen 443 ssl`, `ssl_certificate`, `ssl_certificate_key`,
 `ssl_protocols`, and `ssl_ciphers` directives.
-
-### Configuring record retention time
-
-The `collector` app uses the uWSGI cron interface to purge records in the
-database on a daily basis that are older than a certain age. By default, a
-record will only be kept in the database for 5 weeks (starting from the
-timestamp the `collector` received the record). To modify the retention
-time, update the `MAX_DAYS_KEEP_UNFILTERED_RECORDS` value in
-`collector/collector/config.py` after installation, and restart
-uWSGI for the new setting to take effect.
 
 ## Using the REST API
 
@@ -351,7 +295,7 @@ Database migrations are managed using
 [Flask-Migrate](https://flask-migrate.readthedocs.io/en/latest/). Upon initial
 install of telemetrics-backend, the first migration will be applied, and any
 additional migrations in the `telemetryui/migrations/versions/` directory will
-be applied in sequence and upgrade the `telemdb` schema to the latest version.
+be applied in sequence and upgrade the `telemetry` schema to the latest version.
 
 To create a new migration, you can follow the steps below:
 

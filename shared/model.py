@@ -19,34 +19,12 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.sql.expression import cast
 from sqlalchemy.sql.expression import desc
 from sqlalchemy.sql.expression import case
-from sqlalchemy.sql import text
 from time import time, localtime, strftime, mktime, strptime, gmtime
 from distutils.version import LooseVersion
 
 from . import app
 
 db = SQLAlchemy(app)
-
-
-
-class Classification(db.Model):
-    __tablename__ = 'classification'
-    id = db.Column(db.Integer, primary_key=True)
-    classification = db.Column(db.String)
-    domain = db.Column(db.String)
-    probe = db.Column(db.String)
-
-    def __init__(self, class_str):
-        self.classification = class_str
-
-
-class Build(db.Model):
-    __tablename__ = 'build'
-    id = db.Column(db.Integer, primary_key=True)
-    build = db.Column(db.String)
-
-    def __init__(self, build_num):
-        self.build = build_num
 
 
 class Guilty(db.Model):
@@ -99,56 +77,46 @@ class Guilty(db.Model):
 class Record(db.Model):
     __tablename__ = 'records'
     id = db.Column(db.Integer, primary_key=True)
-    severity = db.Column(db.Integer)
-    machine = db.Column(db.String, default='')
-    machine_id = db.Column(db.String, default='')
-    architecture = db.Column(db.String)
-    kernel_version = db.Column(db.String, default=0)
-    os_name = db.Column(db.String)
-    record_format_version = db.Column(db.Integer, default=0)
-    payload_format_version = db.Column(db.Integer)
-    payload = db.Column(db.LargeBinary)
-    tsp = db.Column(db.Integer)
-    tsp_server = db.Column(db.Integer)
-    buildstamp = db.Column(db.String, default='')
-    backtrace = db.Column(db.String, default='')
-    guilty = db.Column(db.String, default='')
-    dupe_of = db.Column(db.Integer, default=0)
-    dupecount = db.Column(db.Integer, default=0)
-    dupemaster = db.Column(db.Boolean, default=False)
-    security = db.Column(db.Boolean, default=False)
-    hide = db.Column(db.Boolean, default=False)
-    processed = db.Column(db.Boolean, default=False)
-    icon = db.Column(db.String, default='')
-    classification_id = db.Column(db.Integer, db.ForeignKey('classification.id'))
-    build_id = db.Column(db.Integer, db.ForeignKey('build.id'))
-    guilty_id = db.Column(db.Integer, db.ForeignKey('guilty.id'))
+    architecture = db.Column(db.Text)
+    bios_version = db.Column(db.Text, default='')
+    board_name = db.Column(db.Text, default='')
+    build = db.Column(db.Text, nullable=False)
+    classification = db.Column(db.Text, nullable=False)
+    cpu_model = db.Column(db.Text, default='')
+    event_id = db.Column(db.Text, default='')
     external = db.Column(db.Boolean, default=False)
-    board_name = db.Column(db.String, default='')
-    bios_version = db.Column(db.String, default='')
-    cpu_model = db.Column(db.String, default='')
-    event_id = db.Column(db.String, default='')
+    host_type = db.Column(db.Text, default='')
+    kernel_version = db.Column(db.Text, default=0)
+    machine_id = db.Column(db.Text, default='')
+    payload_version = db.Column(db.Integer)
+    record_version = db.Column(db.Integer, default=0)
+    severity = db.Column(db.Integer)
+    system_name = db.Column(db.Text)
+    timestamp_client = db.Column(db.Numeric)
+    timestamp_server = db.Column(db.Numeric, nullable=False)
+    payload = db.Column(db.Text, nullable=False)
 
-    classification = db.relationship('Classification', backref=db.backref('records', lazy='dynamic'), lazy='joined')
-    build = db.relationship('Build', backref=db.backref('records', lazy='dynamic'), lazy='joined')
+    processed = db.Column(db.Boolean, default=False)
+    guilty_id = db.Column(db.Integer, db.ForeignKey('guilty.id'))
+
+    guilty = db.Column(db.Text, default='')
     guilty = db.relationship('Guilty', backref=db.backref('records', lazy='dynamic'), lazy='joined')
 
     def __init__(self, machine_id, host_type, severity, classification, build, architecture, kernel_version,
-                 record_format_version, ts_capture, ts_reception, payload_format_version, os_name,
+                 record_version, ts_capture, ts_reception, payload_version, system_name,
                  board_name, bios_version, cpu_model, event_id, external, payload):
         self.machine_id = machine_id
-        self.machine = host_type
+        self.host_type = host_type
         self.architecture = architecture
         self.classification = classification
-        self.backtrace = payload
         self.build = build
         self.kernel_version = kernel_version
-        self.record_format_version = record_format_version
+        self.record_version = record_version
         self.severity = severity
-        self.tsp = ts_capture
-        self.tsp_server = ts_reception
-        self.payload_format_version = payload_format_version
-        self.os_name = os_name
+        self.timestamp_client = ts_capture
+        self.timestamp_server = ts_reception
+        self.payload_version = payload_version
+        self.system_name = system_name
         self.external = external
         self.board_name = board_name
         self.bios_version = bios_version
@@ -161,7 +129,7 @@ class Record(db.Model):
             self.payload = payload.encode('latin-1')
 
     def __repr__(self):
-        return "<Record(id='{}', class='{}', build='{}', created='{}')>".format(self.id, self.classification, self.build, strftime("%a, %d %b %Y %H:%M:%S", localtime(self.tsp)))
+        return "<Record(id='{}', class='{}', build='{}', created='{}')>".format(self.id, self.classification, self.build, strftime("%a, %d %b %Y %H:%M:%S", localtime(self.timestamp_client)))
 
     def __str__(self):
         return str(self.to_dict())
@@ -170,16 +138,16 @@ class Record(db.Model):
         record = {
             'id': self.id,
             'machine_id': self.machine_id,
-            'machine_type': self.machine,
+            'machine_type': self.host_type,
             'arch': self.architecture,
-            'build': self.build.build,
+            'build': self.build,
             'kernel_version': self.kernel_version,
-            'ts_capture': strftime('%Y-%m-%d %H:%M:%S UTC', gmtime(self.tsp)),
-            'ts_reception': strftime('%Y-%m-%d %H:%M:%S UTC', gmtime(self.tsp_server)),
+            'ts_capture': strftime('%Y-%m-%d %H:%M:%S UTC', gmtime(self.timestamp_client)),
+            'ts_reception': strftime('%Y-%m-%d %H:%M:%S UTC', gmtime(self.timestamp_server)),
             'severity': self.severity,
-            'classification': self.classification.classification,
-            'record_format_version': self.record_format_version,
-            'payload': self.backtrace,
+            'classification': self.classification,
+            'record_version': self.record_version,
+            'payload': self.payload,
             'board_name': self.board_name,
             'bios_version': self.bios_version,
             'cpu_model': self.cpu_model,
@@ -193,12 +161,12 @@ class Record(db.Model):
         record = [
             self.id,
             self.external,
-            self.tsp_server,
+            self.timestamp_server,
             self.severity,
-            self.classification.classification,
-            self.build.build,
+            self.classification,
+            self.build,
             self.machine_id,
-            self.backtrace
+            self.payload
         ]
         return record
 
@@ -208,11 +176,11 @@ class Record(db.Model):
 
     @staticmethod
     def create(machine_id, host_type, severity, classification, build, architecture, kernel_version,
-               record_format_version, ts_capture, ts_reception, payload_format_version, os_name,
+               record_version, ts_capture, ts_reception, payload_version, system_name,
                board_name, bios_version, cpu_model, event_id, external, payload):
         try:
             record = Record(machine_id, host_type, severity, classification, build, architecture, kernel_version,
-                            record_format_version, ts_capture, ts_reception, payload_format_version, os_name,
+                            record_version, ts_capture, ts_reception, payload_version, system_name,
                             board_name, bios_version, cpu_model, event_id, external, payload)
             db.session.add(record)
             db.session.commit()
@@ -226,9 +194,9 @@ class Record(db.Model):
                       interval_sec=None, ts_capture=None, from_id=None):
         records = Record.query
         if build is not None:
-            records = records.join(Record.build).filter_by(build=build)
+            records = records.filter_by(build=build)
         if classification is not None:
-            records = records.join(Record.classification).filter_by(classification=classification)
+            records = records.filter_by(classification=classification)
         if severity is not None:
             records = records.filter(Record.severity == severity)
         if machine_id is not None:
@@ -236,15 +204,15 @@ class Record(db.Model):
         if from_id is not None:
             records = records.filter(Record.id >= from_id)
         if ts_capture is not None:
-            records = records.filter(Record.tsp > ts_capture)
+            records = records.filter(Record.timestamp_client > ts_capture)
 
         if interval_sec is not None:
             current_time = time()
             secs_in_past = current_time - interval_sec
             # Due to time skew on client systems, delayed sends due to
-            # spooling, etc, tsp_server works better as the reference
+            # spooling, etc, timestamp_server works better as the reference
             # timestamp.
-            records = records.filter(Record.tsp_server > secs_in_past)
+            records = records.filter(Record.timestamp_server > secs_in_past)
 
         records = records.order_by(Record.id.desc())
 
@@ -259,32 +227,32 @@ class Record(db.Model):
         return record
 
     @staticmethod
-    def filter_records(build, classification, severity, machine_id=None, os_name=None, limit=None, from_date=None,
+    def filter_records(build, classification, severity, machine_id=None, system_name=None, limit=None, from_date=None,
                        to_date=None, payload=None, not_payload=None, data_source=None):
         records = Record.query
         if build is not None:
-            records = records.join(Record.build).filter_by(build=build)
+            records = records.filter_by(build=build)
         if classification is not None:
             if isinstance(classification, list):
-                records = records.join(Record.classification).filter(Classification.classification.in_(classification))
+                records = records.filter(Record.classification.in_(classification))
             else:
-                records = records.join(Record.classification).filter(Classification.classification.like(classification))
+                records = records.filter(Record.classification.like(classification))
         if severity is not None:
             records = records.filter(Record.severity == severity)
-        if os_name is not None:
-            records = records.filter(Record.os_name == os_name)
+        if system_name is not None:
+            records = records.filter(Record.system_name == system_name)
         if machine_id is not None:
             records = records.filter(Record.machine_id == machine_id)
         if from_date is not None:
             from_date = mktime(strptime(from_date, "%Y-%m-%d"))
-            records = records.filter(Record.tsp >= from_date)
+            records = records.filter(Record.timestamp_client >= from_date)
         if to_date is not None:
             to_date = mktime(strptime(to_date, "%Y-%m-%d"))
-            records = records.filter(Record.tsp < to_date)
+            records = records.filter(Record.timestamp_client < to_date)
         if payload is not None:
-            records = records.filter(Record.backtrace.op('~')(payload))
+            records = records.filter(Record.payload.op('~')(payload))
         if not_payload is not None:
-            records = records.filter(~Record.backtrace.op('~')(not_payload))
+            records = records.filter(~Record.payload.op('~')(not_payload))
         if data_source is not None:
             if data_source == "external":
                 records = records.filter(Record.external == True)
@@ -309,11 +277,10 @@ class Record(db.Model):
                         age = time() - PURGE_FILTERED_RECORDS[field][name] * 24 * 60 * 60
                         q = db.session.query(Record)
                         if field == 'classification':
-                            q = q.join(Record.classification)
-                            q = q.filter(Classification.classification.like(name.replace("*", "%")))
+                            q = q.filter(Record.classification.like(name.replace("*", "%")))
                         else:
                             q = q.filter(getattr(Record, field) == name)
-                        q = q.filter(Record.tsp_server < age)
+                        q = q.filter(Record.timestamp_server < age)
                         if q.all():
                             count = db.session.query(Record).filter(Record.id.in_([x.id for x in q.all()])).delete(synchronize_session=False)
                             print("Deleted {} {} records".format(count, name))
@@ -324,13 +291,12 @@ class Record(db.Model):
                 q = db.session.query(Record.id)
                 for field in PURGE_FILTERED_RECORDS.keys():
                     if field == 'classification':
-                        q = q.join(Record.classification)
                         for classification in PURGE_FILTERED_RECORDS[field].keys():
-                            q = q.filter(~Classification.classification.like(classification.replace("*", "%")))
+                            q = q.filter(~Record.classification.like(classification.replace("*", "%")))
                     else:
                         for name in PURGE_FILTERED_RECORDS[field].keys():
                             q = q.filter(getattr(Record, field) != name)
-                q = q.filter(Record.tsp_server < unfiltered_age)
+                q = q.filter(Record.timestamp_server < unfiltered_age)
                 if q.all():
                     count = db.session.query(Record).filter(Record.id.in_([x.id for x in q.all()])).delete(synchronize_session=False)
                     print("Deleted {} old records".format(count))
@@ -342,22 +308,21 @@ class Record(db.Model):
 
     @staticmethod
     def get_recordcnts_by_build():
-        q = db.session.query(Build.build, db.func.count(Record.id)).join(Record.build)
-        q = q.filter(Build.build.op('~')('^[0-9]+$'))
-        q = q.group_by(Build.build).order_by(cast(Build.build, db.Integer)).all()
+        q = db.session.query(Record.build, db.func.count(Record.id))
+        q = q.filter(Record.build.op('~')('^[0-9]+$'))
+        q = q.group_by(Record.build).order_by(cast(Record.build, db.Integer)).all()
         return q
 
     @staticmethod
     def get_builds():
-        q = db.session.query(Build.build)
-        q = q.order_by(Build.build)
+        q = db.session.query(Record.build).distinct()
+        q = q.order_by(Record.build)
         return sorted(q.all(), key=lambda x: LooseVersion(x[0]), reverse=True)
 
     @staticmethod
     def get_recordcnts_by_classification():
-        q = db.session.query(Classification.classification, db.func.count(Record.id).label('total'))
-        q = q.join(Record.classification)
-        q = q.group_by(Classification.classification)
+        q = db.session.query(Record.classification, db.func.count(Record.id).label('total'))
+        q = q.group_by(Record.classification)
         q = q.order_by(desc('total'))
         return q.all()
 
@@ -368,7 +333,7 @@ class Record(db.Model):
 
     @staticmethod
     def get_classifications(with_regex=False):
-        q = db.session.query(Classification.classification)
+        q = db.session.query(Record.classification).distinct()
         if with_regex:
             classes = [Record.expand_class(c[0].split('/')) for c in q.all()]
             return sorted(set(itertools.chain(*classes)))
@@ -377,7 +342,7 @@ class Record(db.Model):
 
     @staticmethod
     def get_os_map():
-        q = db.session.query(Record.os_name, Build.build).join(Record.build).order_by(Record.os_name).group_by(Record.os_name, Build.build).all()
+        q = db.session.query(Record.system_name, Record.build).order_by(Record.system_name).group_by(Record.system_name, Record.build).all()
         result = {}
         for x in q:
             result.setdefault(x[0], []).append(x[1])
@@ -385,8 +350,8 @@ class Record(db.Model):
 
     @staticmethod
     def get_recordcnts_by_machine_type():
-        q = db.session.query(Record.machine, db.func.count(Record.id).label('total'))
-        q = q.group_by(Record.machine)
+        q = db.session.query(Record.host_type, db.func.count(Record.id).label('total'))
+        q = q.group_by(Record.host_type)
         q = q.order_by(desc('total'))
         return q.all()
 
@@ -397,55 +362,53 @@ class Record(db.Model):
 
     @staticmethod
     def get_crashcnts_by_class(classes=None):
-        q = db.session.query(Classification.classification, db.func.count(Record.id))
-        q = q.join(Record)
+        q = db.session.query(Record.classification, db.func.count(Record.id))
         if classes:
-            q = q.filter(Classification.classification.in_(classes))
+            q = q.filter(Record.classification.in_(classes))
         else:
-            q = q.filter(Classification.classification.like('org.clearlinux/crash/%'))
-        q = q.group_by(Classification.classification)
+            q = q.filter(Record.classification.like('org.clearlinux/crash/%'))
+        q = q.group_by(Record.classification)
         return q.all()
 
     @staticmethod
     def get_crashcnts_by_build(classes=None):
-        q = db.session.query(Build.build, db.func.count(Record.id)).join(Record).join(Classification)
+        q = db.session.query(Record.build, db.func.count(Record.id))
         if not classes:
             classes = ['org.clearlinux/crash/clr']
-        q = q.filter(Classification.classification.in_(classes))
-        q = q.filter(Build.build.op('~')('^[0-9]+$'))
-        q = q.group_by(Build.build)
-        q = q.order_by(desc(cast(Build.build, db.Integer)))
+        q = q.filter(Record.classification.in_(classes))
+        q = q.filter(Record.build.op('~')('^[0-9]+$'))
+        q = q.group_by(Record.build)
+        q = q.order_by(desc(cast(Record.build, db.Integer)))
         q = q.limit(10)
         return q.all()
 
     @staticmethod
     def get_top_crash_guilties(classes=None):
-        q = db.session.query(Guilty.function, Guilty.module, Build.build, db.func.count(Record.id).label('total'), Guilty.id, Guilty.comment)
+        q = db.session.query(Guilty.function, Guilty.module, Record.build, db.func.count(Record.id).label('total'), Guilty.id, Guilty.comment)
         q = q.join(Record)
-        q = q.join(Build)
-        q = q.join(Classification).filter(Record.classification_id == Classification.id)
         if not classes:
             classes = ['org.clearlinux/crash/clr']
-        q = q.filter(Classification.classification.in_(classes))
-        q = q.filter(Build.build.op('~')('^[0-9][0-9]+$'))
+        q = q.filter(Record.classification.in_(classes))
+        q = q.filter(Record.build.op('~')('^[0-9][0-9]+$'))
+        q = q.filter(cast(Record.build, db.Integer) <= 100000)
         q = q.filter(Guilty.hide == False)
-        q = q.group_by(Guilty.function, Guilty.module, Guilty.comment, Guilty.id, Build.build)
-        q = q.order_by(desc(cast(Build.build, db.Integer)), desc('total'))
+        q = q.group_by(Guilty.function, Guilty.module, Guilty.comment, Guilty.id, Record.build)
+        q = q.order_by(desc(cast(Record.build, db.Integer)), desc('total'))
         # query for records created in the last week (~ 10 Clear builds)
-        q = q.filter(Build.build.in_(sorted(tuple(set([x[2] for x in q.all()])), key=lambda x: int(x))[-8:]))
+        q = q.filter(Record.build.in_(sorted(tuple(set([x[2] for x in q.all()])), key=lambda x: int(x))[-8:]))
         interval_sec = 24 * 60 * 60 * 7
         current_time = time()
         sec_in_past = current_time - interval_sec
-        q = q.filter(Record.tsp > sec_in_past)
+        q = q.filter(Record.timestamp_client > sec_in_past)
         return q.all()
 
     @staticmethod
     def get_new_crash_records(classes=None, id=None):
-        q = db.session.query(Record).join(Classification)
+        q = db.session.query(Record)
         if not classes:
             classes = ['org.clearlinux/crash/clr']
-        q = q.filter(Classification.classification.in_(classes))
-        q = q.filter(Record.os_name == 'clear-linux-os')
+        q = q.filter(Record.classification.in_(classes))
+        q = q.filter(Record.system_name == 'clear-linux-os')
         q = q.filter(Record.processed == False)
         if id:
             q = q.filter(Record.id == id)
@@ -481,18 +444,17 @@ class Record(db.Model):
 
     @staticmethod
     def get_crash_backtraces(classes=None, guilty_id=None, machine_id=None, build=None, most_recent=None, record_id=None):
-        q = db.session.query(Record.backtrace, Record.id).join(Classification)
+        q = db.session.query(Record.payload, Record.id)
         # Short circuit if we know the record ID
         if record_id:
             q = q.filter(Record.id == record_id)
             return q.first()
         if build:
-            q = q.join(Build)
-            q = q.filter(Build.build == build)
+            q = q.filter(Record.build == build)
         if not classes:
             classes = ['org.clearlinux/crash/clr']
-        q = q.filter(Classification.classification.in_(classes))
-        q = q.filter(Record.os_name == 'clear-linux-os')
+        q = q.filter(Record.classification.in_(classes))
+        q = q.filter(Record.system_name == 'clear-linux-os')
         if guilty_id:
             q = q.filter(Record.guilty_id == guilty_id)
         if machine_id:
@@ -501,16 +463,16 @@ class Record(db.Model):
             interval_sec = 24 * 60 * 60 * int(most_recent)
             current_time = time()
             sec_in_past = current_time - interval_sec
-            q = q.filter(Record.tsp > sec_in_past)
+            q = q.filter(Record.timestamp_client > sec_in_past)
         return q.all()
 
     @staticmethod
     def reset_processed_records(classes=None, id=None):
-        q = db.session.query(Record).join(Classification).join(Build)
+        q = db.session.query(Record)
         if not classes:
             classes = ['org.clearlinux/crash/clr']
-        q = q.filter(Classification.classification.in_(classes))
-        q = q.filter(Record.os_name == 'clear-linux-os')
+        q = q.filter(Record.classification.in_(classes))
+        q = q.filter(Record.system_name == 'clear-linux-os')
         if id:
             q = q.filter(Record.id == id)
         records = q.all()
@@ -520,45 +482,44 @@ class Record(db.Model):
 
     @staticmethod
     def get_machine_ids_for_guilty(id, most_recent=None):
-        q = db.session.query(Build.build, Record.machine_id, db.func.count(Record.id).label('total'), Record.guilty_id)
-        q = q.join(Record)
+        q = db.session.query(Record.build, Record.machine_id, db.func.count(Record.id).label('total'), Record.guilty_id)
         q = q.filter(Record.guilty_id == id)
-        q = q.filter(Record.os_name == 'clear-linux-os')
-        q = q.filter(Build.build.op('~')('^[0-9][0-9]+$'))
-        q = q.group_by(Build.build, Record.machine_id, Record.guilty_id)
-        q = q.order_by(desc(cast(Build.build, db.Integer)), desc('total'))
+        q = q.filter(Record.system_name == 'clear-linux-os')
+        q = q.filter(Record.build.op('~')('^[0-9][0-9]+$'))
+        q = q.group_by(Record.build, Record.machine_id, Record.guilty_id)
+        q = q.order_by(desc(cast(Record.build, db.Integer)), desc('total'))
         if most_recent:
             interval_sec = 24 * 60 * 60 * int(most_recent)
             current_time = time()
             sec_in_past = current_time - interval_sec
-            q = q.filter(Record.tsp > sec_in_past)
+            q = q.filter(Record.timestamp_client > sec_in_past)
         return q.all()
 
     @staticmethod
     def get_update_msgs():
-        q = db.session.query(Record.backtrace).join(Classification)
-        q = q.filter(Classification.classification == "org.clearlinux/swupd-client/update")
+        q = db.session.query(Record.payload)
+        q = q.filter(Record.classification == "org.clearlinux/swupd-client/update")
 
         sec_2_weeks = 24 * 60 * 60 * 7
         current_time = time()
         time_2_weeks_ago = current_time - sec_2_weeks
 
         # query for records created in that last 2 weeks
-        q = q.filter(Record.tsp > time_2_weeks_ago)
+        q = q.filter(Record.timestamp_client > time_2_weeks_ago)
         return q
 
     @staticmethod
     def get_swupd_msgs(most_recent=None):
-        q = db.session.query(Record.tsp, Record.machine_id, Record.backtrace).join(Classification)
-        q = q.filter(Classification.classification.like('org.clearlinux/swupd-client/%'))
+        q = db.session.query(Record.timestamp_client, Record.machine_id, Record.payload)
+        q = q.filter(Record.classification.like('org.clearlinux/swupd-client/%'))
 
         if most_recent:
             interval_sec = 24 * 60 * 60 * int(most_recent)
             current_time = time()
             sec_in_past = current_time - interval_sec
-            q = q.filter(Record.tsp > sec_in_past)
+            q = q.filter(Record.timestamp_client > sec_in_past)
 
-        q = q.order_by(desc(Record.tsp))
+        q = q.order_by(desc(Record.timestamp_client))
         return q
 
     @staticmethod
@@ -568,19 +529,18 @@ class Record(db.Model):
         internal_expr = case([(Record.external == False, Record.machine_id), ]).label('internal_count')
         external_expr = case([(Record.external == True, Record.machine_id), ]).label('external_count')
 
-        q = db.session.query(Build.build, db.func.count(db.distinct(internal_expr)), db.func.count(db.distinct(external_expr)))
-        q = q.join(Record).join(Classification)
-        q = q.filter(Classification.classification == "org.clearlinux/heartbeat/ping")
-        q = q.filter(Record.os_name == 'clear-linux-os')
-        q = q.group_by(Build.build)
+        q = db.session.query(Record.build, db.func.count(db.distinct(internal_expr)), db.func.count(db.distinct(external_expr)))
+        q = q.filter(Record.classification == "org.clearlinux/heartbeat/ping")
+        q = q.filter(Record.system_name == 'clear-linux-os')
+        q = q.group_by(Record.build)
 
         if most_recent:
             interval_sec = 24 * 60 * 60 * int(most_recent)
             current_time = time()
             sec_in_past = current_time - interval_sec
-            q = q.filter(Record.tsp > sec_in_past)
+            q = q.filter(Record.timestamp_client > sec_in_past)
 
-        q = q.order_by(cast(Build.build, db.Integer))
+        q = q.order_by(cast(Record.build, db.Integer))
         return q.all()
 
 
@@ -655,6 +615,5 @@ class GuiltyBlacklist(db.Model):
         except:
             db.session.rollback()
             raise
-
 
 # vi: ts=4 et sw=4 sts=4
