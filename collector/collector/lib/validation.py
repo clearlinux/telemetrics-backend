@@ -137,7 +137,7 @@ def validate_timestamp(timestamp):
 
 
 def validate_architecture(arch):
-    return arch in ["armv7l", "armv6l", "amd64", "sparc64", "ppc64", "i686", "i386", "x86_64", "ppc"]
+    return arch in ["armv7l", "armv6l", "aarch64", "amd64", "sparc64", "ppc64", "i686", "i386", "x86_64", "ppc"]
 
 
 def validate_host_type(host_type):
