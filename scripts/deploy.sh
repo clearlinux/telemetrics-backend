@@ -221,7 +221,7 @@ _write_requirements() {
     cat > $1 << EOF
 alembic==0.9.5
 click==6.7
-Flask==0.12.2
+Flask==0.12.3
 Flask-Migrate==2.1.0
 Flask-SQLAlchemy==2.2
 Flask-WTF==0.14.2
