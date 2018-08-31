@@ -1,0 +1,9 @@
+[Unit]
+Description=Runs update materialized views
+
+[Timer]
+OnCalendar=*:*:0/59
+Unit=telemetryui_update_materialized_views.service
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,7 @@
+{
+  "dbname": "telemetry",
+  "user": "postgres",
+  "password": "",
+  "host": "localhost"
+}
+

@@ -1,0 +1,9 @@
+[Unit]
+Description=Runs flush_db
+
+[Timer]
+OnCalendar=*-*-* 1:00:00
+Unit=flush_db.service
+
+[Install]
+WantedBy=multi-user.target

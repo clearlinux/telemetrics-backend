@@ -1,0 +1,10 @@
+[Unit]
+Description=Update telemetryui views
+
+[Service]
+Type=simple
+User=telemetry
+Group=telemetry
+WorkingDirectory=@@install_path@@/scripts
+ExecStart=@@install_path@@/venv/bin/python3 @@install_path@@/scripts/update_materialized_views.py --config @@install_path@@/scripts/config.json
+StandardError=journal

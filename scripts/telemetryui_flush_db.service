@@ -1,0 +1,10 @@
+[Unit]
+Description=Trim telemetryui db
+
+[Service]
+Type=simple
+User=telemetry
+Group=telemetry
+WorkingDirectory=@@install_path@@/scripts
+ExecStart=@@install_path@@/venv/bin/python3 @@install_path@@/scripts/flush_db.py --config @@install_path@@/scripts/config.json
+StandardError=journal
