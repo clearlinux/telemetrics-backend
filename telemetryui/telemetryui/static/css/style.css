@@ -85,7 +85,10 @@ table.telem-records {
 }
 
 th.row-id {
-    width: 5%
+    width: 10%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 th.row-source {
@@ -101,7 +104,7 @@ th.row-when {
 }
 
 th.row-severity {
-    width: 7%;
+    width: 5%;
 }
 
 th.row-class {
@@ -117,7 +120,7 @@ th.row-version {
 }
 
 th.row-payload {
-    width: 25%;
+    width: 22%;
 }
 
 th.row-button {
