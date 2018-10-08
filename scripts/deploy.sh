@@ -246,9 +246,9 @@ _install_pip_pkgs() {
   sudo rm -f "$log"
   if [ $DISTRO == "clr" ]; then
     # the latest psycopg2 binary package is incompatible with the glibc 2.26 on Clear Linux
-    sudo bash -c "https_proxy=$https_proxy source venv/bin/activate && https_proxy=$https_proxy pip3 --log $log install --no-binary psycopg2 -r $reqs"
+    sudo bash -c "https_proxy=$https_proxy source venv/bin/activate && https_proxy=$https_proxy pip3 --log $log install --no-binary psycopg2 -r $reqs uwsgidecorators"
   else
-    sudo bash -c "https_proxy=$https_proxy source venv/bin/activate && https_proxy=$https_proxy pip3 --log $log install -r $reqs"
+    sudo bash -c "https_proxy=$https_proxy source venv/bin/activate && https_proxy=$https_proxy pip3 --log $log install -r $reqs uwsgi uwsgidecorators"
   fi
 }
 
