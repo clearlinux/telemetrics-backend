@@ -27,7 +27,6 @@ COLLECTOR_INI="collector_uwsgi.ini"
 TELEMETRYUI_INI="telemetryui_uwsgi.ini"
 SPOOL_DIR="uwsgi-spool"
 APT_GET_INSTALL="DEBIAN_FRONTEND=noninteractive apt-get install -y -o Dpkg::=\"--force-confnew\""
-APT_GET_REMOVE="DEBIAN_FRONTEND=noninteractive apt-get remove -y -o Dpkg::=\"--force-confnew\""
 YUM_INSTALL="yum install -y"
 
 usage() {
@@ -638,13 +637,12 @@ do_resetdb() {
 }
 
 _uninstall_ubuntu_pkgs() {
-  sudo $APT_GET_REMOVE postgresql postgresql-contrib
   sudo rm -rv $REMOTE_APP_DIR
   sudo rm -rfv /etc/init/uwsgi.conf
   sudo rm -rfv /lib/systemd/system/uwsgi.service
   sudo rm -rv /etc/uwsgi/vassals
   sudo bash -c "yes | pip3 uninstall uwsgitop"
-  sudo $APT_GET_REMOVE $DEBIAN_PKGS
+  echo "The following packages required for the telemetryui may be removed at your discretion: $DEBIAN_PKGS"
 }
 
 do_uninstall() {
