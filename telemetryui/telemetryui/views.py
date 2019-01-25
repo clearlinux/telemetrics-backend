@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+import ast
 import re
 import time
 import json
@@ -39,10 +40,10 @@ from .model import (
     GuiltyBlacklist)
 from .updates import compute_update_matrix
 from flask import Response
+import redis
 
 RECORDS_PER_PAGE = app.config.get('RECORDS_PER_PAGE', 50)
 MAX_RECORDS_PER_PAGE = app.config.get('MAX_RECORDS_PER_PAGE', 1000)
-
 
 @app.route('/telemetryui/', methods=['GET', 'POST'])
 @app.route('/telemetryui/records', methods=['GET', 'POST'])
@@ -50,18 +51,18 @@ MAX_RECORDS_PER_PAGE = app.config.get('MAX_RECORDS_PER_PAGE', 1000)
 def records(page=1):
     form = forms.RecordFilterForm()
 
-    class_strings = Record.get_classifications(with_regex=True)
+    class_strings = get_cached_data("class_strings", 600, Record.get_classifications, with_regex=True)
+    builds = get_cached_data("builds", 600, Record.get_builds)
+    os_map = get_cached_data("os_map", 600, Record.get_os_map)
+
     form.classification.choices = [(cs, cs) if "*" not in cs else (cs.replace("*", "%"), cs) for cs in class_strings]
     form.classification.choices.insert(0, ("All", "All"))
-
-    builds = Record.get_builds()
-    form.build.choices = [(b.build, b.build) for b in builds]
+    form.build.choices = [(b[0], b[0]) for b in builds]
     form.build.choices.insert(0, ("All", "All"))
 
     form.severity.choices = [("All", "All"), ("1", "1 - low"), ("2", "2 - med"), ("3", "3 - high"), ("4", "4 - crit")]
     cl = session.get('severity')
 
-    os_map = Record.get_os_map()
     form.system_name.choices = [("All", "All")] + [(n, n) for n in os_map.keys()]
 
     form.machine_id.default = ""
@@ -176,15 +177,16 @@ def record_details(record_id):
 
 @app.route('/telemetryui/builds')
 def builds():
-    build_rec_pairs = Record.get_recordcnts_by_build()
+    build_rec_pairs = get_cached_data("build_rec_pairs", 600, Record.get_recordcnts_by_build)
     return render_template('builds.html', build_stats=build_rec_pairs)
 
 
 @app.route('/telemetryui/stats')
 def stats():
     # Display records per classification and records per machine type for now
-    class_rec_pairs = Record.get_recordcnts_by_classification()
-    machine_rec_pairs = Record.get_recordcnts_by_machine_type()
+    class_rec_pairs = get_cached_data("class_rec_pairs", 600, Record.get_recordcnts_by_classification)
+
+    machine_rec_pairs = get_cached_data("machine_rec_pairs", 600, Record.get_recordcnts_by_machine_type)
 
     charts = [{'column': 'Classification', 'record_stats': class_rec_pairs},
               {'column': 'Platform', 'record_stats': machine_rec_pairs}]
@@ -231,11 +233,11 @@ def crashes(filter=None):
 
     all_classes = crash.get_all_classes()
     backtrace_classes = crash.get_backtrace_classes()
-    class_pairs = Record.get_crashcnts_by_class(classes=all_classes)
-    build_pairs = Record.get_crashcnts_by_build(classes=backtrace_classes)
+    class_pairs = get_cached_data("class_pairs", 600, Record.get_crashcnts_by_class, classes=all_classes)
+    build_pairs = get_cached_data("build_pairs", 600, Record.get_crashcnts_by_build, classes=backtrace_classes)
     charts = [{'column': 'classification', 'record_stats': class_pairs, 'type': 'pie', 'width': 6},
               {'column': 'build', 'record_stats': build_pairs, 'type': 'column', 'width': 6}]
-    tmp = Record.get_top_crash_guilties(classes=backtrace_classes)
+    tmp = get_cached_data("tmp_top_crash_guilties", 600, Record.get_top_crash_guilties, classes=backtrace_classes)
 
     if filter:
         guilties = crash.guilty_list_for_build(tmp, filter)
@@ -519,14 +521,14 @@ def thermal():
 
 @app.route('/telemetryui/updates')
 def updates():
-    updates = Record.get_updates()
+    updates = get_cached_data("updates_data", 600, Record.get_updates)
     return json.dumps(updates)
 
 
 @app.route('/telemetryui/update_matrix')
 def swupd_matrix():
-    update_msgs_query = Record.get_update_msgs()
-    updates = compute_update_matrix(update_msgs_query.all())
+    update_msgs_query = get_cached_data("update_msgs_query", 600, Record.get_update_msgs)
+    updates = compute_update_matrix(update_msgs_query)
     return render_template('update_matrix.html', updates=updates)
 
 
@@ -539,7 +541,7 @@ def population():
               {'id': 'ThreeDay', 'time': 3, 'timestr': 'Three Days'}]
 
     for c in charts:
-        msgs = Record.get_heartbeat_msgs(c['time'])
+        msgs = get_cached_data(c['id'], 600, Record.get_heartbeat_msgs, c['time'])
         c['stats'] = (len(msgs) > 0) and msgs or None
 
     return render_template('population.html', charts=charts)
@@ -609,6 +611,27 @@ def load_plugins():
     for plugin in plugins:
         load_plugin(plugin)
 
+
+def get_cached_data(varname, expiration, funct, *args, **kwargs):
+    try:
+        # Default parameters are to run on localhost with port 6379
+        redis_client = redis.StrictRedis(decode_responses=True);
+        # Try to get data from redis first
+        ret = redis_client.get(varname)
+        if ret is not None:
+            # Convert to original type if successful
+            ret = ast.literal_eval(ret)
+        else:
+            # If nothing was found, query the database
+            ret = funct(*args, **kwargs)
+            # Convert to string representation and cache via redis
+            redis_client.set(varname, repr(ret), ex=expiration)
+    except redis.exceptions.ConnectionError as e:
+        print("%s Redis probably isn't running?" % str(e))
+        # If we can't connect to redis, just query directly
+        ret = funct(*args, **kwargs)
+
+    return ret
 
 load_plugins()
 
