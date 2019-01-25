@@ -506,7 +506,7 @@ class Record(db.Model):
 
         # query for records created in that last 2 weeks
         q = q.filter(Record.timestamp_client > time_2_weeks_ago)
-        return q
+        return q.all()
 
     @staticmethod
     def get_swupd_msgs(most_recent=None):
