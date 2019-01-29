@@ -16,9 +16,9 @@
 #
 
 REMOTE_APP_DIR="/var/www/telemetry"
-DEBIAN_PKGS="build-essential python3 python3-dev python3-pip virtualenv libpq-dev nginx git uwsgi uwsgi-plugin-python3"
-REDHAT_PKGS="gcc gcc-c++ make python34 python34-devel python34-pip python34-virtualenv postgresql-devel postgresql-server postgresql-contrib nginx git policycoreutils-python uwsgi uwsgi-plugin-python3"
-CLR_BUNDLES="application-server database-basic database-basic-dev python-basic os-core-dev web-server-basic"
+DEBIAN_PKGS="build-essential python3 python3-dev python3-pip virtualenv libpq-dev nginx git uwsgi uwsgi-plugin-python3 redis"
+REDHAT_PKGS="gcc gcc-c++ make python34 python34-devel python34-pip python34-virtualenv postgresql-devel postgresql-server postgresql-contrib nginx git policycoreutils-python uwsgi uwsgi-plugin-python3 redis"
+CLR_BUNDLES="application-server database-basic database-basic-dev python-basic os-core-dev web-server-basic redis-native"
 DB_PASSWORD=""
 NGINX_USER=""
 NGINX_GROUP=""
@@ -176,6 +176,7 @@ do_restart() {
   sudo systemctl daemon-reload
   sudo systemctl restart nginx
   sudo systemctl restart uwsgi
+  sudo systemctl restart redis
 }
 
 set_proxy() {
@@ -232,6 +233,7 @@ MarkupSafe==1.0
 psycopg2==2.7.6
 python-dateutil==2.6.1
 python-editor==1.0.3
+redis==3.1.0
 six==1.10.0
 SQLAlchemy==1.1.13
 Werkzeug==0.12.2
@@ -513,6 +515,9 @@ _deploy() {
   sudo ln -sf $REMOTE_APP_DIR/telemetryui/telemetryui_uwsgi.ini /etc/uwsgi/vassals/
   sudo ln -sf $REMOTE_APP_DIR/collector/collector_uwsgi.ini /etc/uwsgi/vassals/
   sudo systemctl enable uwsgi
+
+  # Enable redis
+  sudo systemctl enable redis
 
   # Cert configuration
   if [ ! -f /etc/nginx/ssl/telemetry.cert.pem ]; then
