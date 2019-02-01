@@ -228,7 +228,7 @@ itsdangerous==0.24
 Jinja2==2.9.6
 Mako==1.0.7
 MarkupSafe==1.0
-psycopg2==2.7.3
+psycopg2==2.7.6
 python-dateutil==2.6.1
 python-editor==1.0.3
 six==1.10.0
