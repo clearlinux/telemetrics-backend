@@ -87,6 +87,7 @@ def is_blacklisted(function, module):
 
 def demangle_backtrace(bt):
     new_bt = []
+    # FIXME: c++filt should be replaced before demangle_backtrace is used again
     prog = '/usr/bin/c++filt'
 
     frame_regex = re.compile(frame_pattern)
@@ -233,8 +234,7 @@ def _process_guilties(args):
         filters = GuiltyBlacklist.get_guilties()
         for rec in crashes:
             if rec.payload:
-                new_bt = demangle_backtrace(rec.payload)
-                rec.payload = new_bt
+                # TODO: re-add demangling capabilities when a better solution is found
                 # TODO: update the rec.payload field as well
                 Record.commit_guilty_changes()
                 g, match = find_guilty(rec.payload)
