@@ -16,10 +16,10 @@
 #
 
 REMOTE_APP_DIR="/var/www/telemetry"
-DEBIAN_PKGS="build-essential python3 python3-dev python3-pip virtualenv libpq-dev nginx git uwsgi uwsgi-plugin-python3"
-REDHAT_PKGS="gcc gcc-c++ make python34 python34-devel python34-pip python34-virtualenv postgresql-devel postgresql-server postgresql-contrib nginx git policycoreutils-python uwsgi uwsgi-plugin-python3"
+DEBIAN_PKGS="build-essential python3 python3-dev python3-pip virtualenv libpq-dev nginx git uwsgi uwsgi-plugin-python3 redis"
+REDHAT_PKGS="gcc gcc-c++ make python34 python34-devel python34-pip python34-virtualenv postgresql-devel postgresql-server postgresql-contrib nginx git policycoreutils-python uwsgi uwsgi-plugin-python3 redis"
 SUSE_PKGS="gcc gcc-c++ make python3 python3-devel python3-pip python3-virtualenv postgresql-devel postgresql-server postgresql-contrib nginx git uwsgi uwsgi-python3 tar"
-CLR_BUNDLES="application-server database-basic database-basic-dev python-basic os-core-dev web-server-basic"
+CLR_BUNDLES="application-server database-basic database-basic-dev python-basic os-core-dev web-server-basic redis-native"
 DB_PASSWORD=""
 NGINX_USER=""
 NGINX_GROUP=""
@@ -28,7 +28,6 @@ COLLECTOR_INI="collector_uwsgi.ini"
 TELEMETRYUI_INI="telemetryui_uwsgi.ini"
 SPOOL_DIR="uwsgi-spool"
 APT_GET_INSTALL="DEBIAN_FRONTEND=noninteractive apt-get install -y -o Dpkg::=\"--force-confnew\""
-APT_GET_REMOVE="DEBIAN_FRONTEND=noninteractive apt-get remove -y -o Dpkg::=\"--force-confnew\""
 YUM_INSTALL="yum install -y"
 ZYPPER_INSTALL="zypper install --no-recommends -y"
 
@@ -184,6 +183,7 @@ do_restart() {
   sudo systemctl daemon-reload
   sudo systemctl restart nginx
   sudo systemctl restart uwsgi
+  sudo systemctl restart redis
 }
 
 set_proxy() {
@@ -243,9 +243,10 @@ itsdangerous==0.24
 Jinja2==2.9.6
 Mako==1.0.7
 MarkupSafe==1.0
-psycopg2==2.7.3
+psycopg2==2.7.6
 python-dateutil==2.6.1
 python-editor==1.0.3
+redis==3.1.0
 six==1.10.0
 SQLAlchemy==1.1.13
 Werkzeug==0.12.2
@@ -257,12 +258,7 @@ _install_pip_pkgs() {
   local log=$REMOTE_APP_DIR/install.log
   local reqs=$1
   sudo rm -f "$log"
-  if [ $DISTRO == "clr" ]; then
-    # the latest psycopg2 binary package is incompatible with the glibc 2.26 on Clear Linux
-    sudo bash -c "https_proxy=$https_proxy source venv/bin/activate && https_proxy=$https_proxy pip3 --log $log install --no-binary psycopg2 -r $reqs uwsgidecorators"
-  else
-    sudo bash -c "https_proxy=$https_proxy source venv/bin/activate && https_proxy=$https_proxy pip3 --log $log install -r $reqs uwsgi uwsgidecorators"
-  fi
+  sudo bash -c "https_proxy=$https_proxy source venv/bin/activate && https_proxy=$https_proxy pip3 --log $log install -r $reqs uwsgi uwsgidecorators"
 }
 
 _install_virtual_env() {
@@ -543,6 +539,9 @@ _deploy() {
   sudo ln -sf $REMOTE_APP_DIR/collector/collector_uwsgi.ini /etc/uwsgi/vassals/
   sudo systemctl enable uwsgi
 
+  # Enable redis
+  sudo systemctl enable redis
+
   # Cert configuration
   if [ ! -f /etc/nginx/ssl/telemetry.cert.pem ]; then
     sudo sed -i.backup 's/\(ssl_.*\)/# \1/;s/\(listen.*443 ssl\)/# \1/' $REMOTE_APP_DIR/sites_nginx.conf
@@ -666,13 +665,12 @@ do_resetdb() {
 }
 
 _uninstall_ubuntu_pkgs() {
-  sudo $APT_GET_REMOVE postgresql postgresql-contrib
   sudo rm -rv $REMOTE_APP_DIR
   sudo rm -rfv /etc/init/uwsgi.conf
   sudo rm -rfv /lib/systemd/system/uwsgi.service
   sudo rm -rv /etc/uwsgi/vassals
   sudo bash -c "yes | pip3 uninstall uwsgitop"
-  sudo $APT_GET_REMOVE $DEBIAN_PKGS
+  echo "The following packages required for the telemetryui may be removed at your discretion: $DEBIAN_PKGS"
 }
 
 do_uninstall() {
