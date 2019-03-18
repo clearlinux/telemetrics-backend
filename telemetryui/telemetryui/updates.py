@@ -63,6 +63,9 @@ def compute_update_matrix(update_messages):
 
     for msg in update_messages:
         lines = msg[0].splitlines()
+        # ignore malformed payloads
+        if len(lines) < 4:
+            continue
         from_match = from_version_regex.match(lines[2])
         to_match = to_version_regex.match(lines[3])
         if from_match and to_match:
