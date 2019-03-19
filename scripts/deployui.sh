@@ -18,6 +18,7 @@
 REMOTE_APP_DIR="/var/www/telemetry"
 DEBIAN_PKGS="build-essential python3 python3-dev python3-pip virtualenv libpq-dev nginx git uwsgi uwsgi-plugin-python3 redis-server"
 REDHAT_PKGS="gcc gcc-c++ make python34 python34-devel python34-pip python34-virtualenv postgresql-devel postgresql-server postgresql-contrib nginx git policycoreutils-python uwsgi uwsgi-plugin-python3 redis"
+SUSE_PKGS="gcc gcc-c++ make python3 python3-devel python3-pip python3-virtualenv postgresql-devel postgresql-server postgresql-contrib nginx git uwsgi uwsgi-python3 tar redis"
 CLR_BUNDLES="application-server database-basic database-basic-dev python-basic os-core-dev web-server-basic redis-native"
 DB_PASSWORD=""
 NGINX_USER=""
@@ -27,6 +28,8 @@ TELEMETRYUI_INI="telemetryui_uwsgi.ini"
 SPOOL_DIR="uwsgi-spool"
 APT_GET_INSTALL="DEBIAN_FRONTEND=noninteractive apt-get install -y -o Dpkg::=\"--force-confnew\""
 YUM_INSTALL="yum install -y"
+ZYPPER_INSTALL="zypper install --no-recommends -y"
+REDIS_SERVICE="redis"
 
 usage() {
   echo "Usage: $0 -H DOMAIN [OPTIONS]"
@@ -34,7 +37,7 @@ usage() {
   echo "Deploy snapshot of the telemetrics-backend"
   echo -en "\n"
   echo -e "  -a\tPerform specified action (deploy, install, migrate, resetdb, restart, uninstall, upgradepkgs; default: deploy)"
-  echo -e "  -d\tDistro to deploy to (ubuntu, centos or clr; default: ubuntu)"
+  echo -e "  -d\tDistro to deploy to (ubuntu, centos, opensuse or clr; default: ubuntu)"
   echo -e "  -h\tPrint these options"
   echo -e "  -H\tSet domain for deployment (only accepted value is \"localhost\" for now)"
   echo -e "  -r\tSet repo location to deploy from (default: https://github.com/clearlinux/telemetrics-backend)"
@@ -96,6 +99,12 @@ while getopts "a:d:hH:r:s:t:u" arg; do
           DISTRO="$OPTARG"
           NGINX_USER="nginx"
           NGINX_GROUP="nginx"
+          ;;
+        opensuse|suse)
+          DISTRO="opensuse"
+          NGINX_USER="nginx"
+          NGINX_GROUP="nginx"
+          REDIS_SERVICE="redis@telemetrics"
           ;;
         *)
           error "invalid argument for -d ($OPTARG)"
@@ -175,7 +184,7 @@ do_restart() {
   sudo systemctl daemon-reload
   sudo systemctl restart nginx
   sudo systemctl restart uwsgi
-  sudo systemctl restart redis
+  sudo systemctl restart $REDIS_SERVICE
 }
 
 set_proxy() {
@@ -215,6 +224,12 @@ _install_centos_reqs() {
   sudo https_proxy=$https_proxy $YUM_INSTALL $REDHAT_PKGS
   sudo https_proxy=$https_proxy pip3 install uwsgitop
   sudo ln /usr/bin/virtualenv-3 /usr/bin/virtualenv
+}
+
+_install_opensuse_reqs() {
+  set_proxy
+  sudo https_proxy=$https_proxy $ZYPPER_INSTALL $SUSE_PKGS
+  sudo https_proxy=$https_proxy pip3 install uwsgitop
 }
 
 _write_requirements() {
@@ -289,6 +304,12 @@ _postinstall_postgres_clr() {
 _postinstall_postgres_centos() {
   sudo postgresql-setup initdb
   sudo sed -i 's/ident$/md5/' /var/lib/pgsql/data/pg_hba.conf
+}
+
+_postinstall_postgres_opensuse() {
+  echo "Enter password for 'postgres' user:"
+  sudo passwd postgres
+  sudo -u postgres initdb ~postgres/data --auth-local=trust
 }
 
 _start_postgres() {
@@ -391,6 +412,15 @@ _config_nginx_centos() {
   sudo systemctl enable nginx
 }
 
+_config_nginx_opensuse() {
+  sudo cp -av $scripts_path/nginx.conf /etc/nginx/nginx.conf
+  sudo ln -sf $REMOTE_APP_DIR/sites_nginx.conf /etc/nginx/conf.d/
+  sudo systemctl enable nginx
+  # open port 80 for the webui/collector
+  sudo firewall-cmd --permanent --zone=public --add-port=80/tcp
+  sudo firewall-cmd --reload
+}
+
 _config_uwsgi_ubuntu() {
   sudo cp -af $scripts_path/uwsgi.conf /etc/init/
   sudo cp -af $scripts_path/uwsgi.service /lib/systemd/system/
@@ -411,6 +441,15 @@ _config_uwsgi_centos() {
   sudo checkmodule -M -m -o nginx-uwsgi.mod nginx-uwsgi.te
   sudo semodule_package -o nginx-uwsgi.pp -m nginx-uwsgi.mod
   sudo semodule -i nginx-uwsgi.pp
+}
+
+_config_uwsgi_opensuse() {
+  sudo cp -afv $scripts_path/uwsgi.service /etc/systemd/system/
+  sudo systemctl daemon-reload
+}
+
+_config_redis_opensuse() {
+  sudo cp -afv /etc/redis/default.conf.example /etc/redis/telemetrics.conf
 }
 
 _generate_key() {
@@ -467,7 +506,7 @@ _deploy() {
   _subst_config "$scripts_path/uwsgi.conf"
   _subst_config "$scripts_path/sites_nginx.conf"
   # get uwsgi location, in case this was installed during script exec
-  UWSGI_PATH=$(type -p uwsgi)
+  UWSGI_PATH=$(PATH=$PATH:/usr/sbin type -p uwsgi)
   _subst_config "$scripts_path/uwsgi.service"
 
   # Finalize configuration for postgres
@@ -497,8 +536,11 @@ _deploy() {
   sudo ln -sf $REMOTE_APP_DIR/telemetryui/telemetryui_uwsgi.ini /etc/uwsgi/vassals/
   sudo systemctl enable uwsgi
 
+  # Configure redis if necessary
+  try_func _config_redis_${DISTRO}
+
   # Enable redis
-  sudo systemctl enable redis
+  sudo systemctl enable $REDIS_SERVICE
 
   # Cert configuration
   if [ ! -f /etc/nginx/ssl/telemetry.cert.pem ]; then
