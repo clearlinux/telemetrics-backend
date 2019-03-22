@@ -53,8 +53,8 @@ all required services. The script is named `deploy.sh` and lives in the
 scripts/ directory in this repository.
 
 The script supports installation to the following Linux distributions: Ubuntu
-Server 16.04 (or newer), and Clear Linux OS for Intel Architecture (any recent
-build).
+Server 16.04 (or newer), Clear Linux OS for Intel Architecture (any recent
+build), and openSUSE Leap 15.0.
 
 ### Running the deployment script
 
