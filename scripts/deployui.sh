@@ -16,7 +16,7 @@
 #
 
 REMOTE_APP_DIR="/var/www/telemetry"
-DEBIAN_PKGS="build-essential python3 python3-dev python3-pip virtualenv libpq-dev nginx git uwsgi uwsgi-plugin-python3 redis"
+DEBIAN_PKGS="build-essential python3 python3-dev python3-pip virtualenv libpq-dev nginx git uwsgi uwsgi-plugin-python3 redis-server"
 REDHAT_PKGS="gcc gcc-c++ make python34 python34-devel python34-pip python34-virtualenv postgresql-devel postgresql-server postgresql-contrib nginx git policycoreutils-python uwsgi uwsgi-plugin-python3 redis"
 CLR_BUNDLES="application-server database-basic database-basic-dev python-basic os-core-dev web-server-basic redis-native"
 DB_PASSWORD=""
