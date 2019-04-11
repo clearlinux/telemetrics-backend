@@ -196,6 +196,7 @@ def stats():
 @app.route('/telemetryui/crashes', methods=['GET', 'POST'])
 def crashes(filter=None):
     form = forms.GuiltyDetailsForm()
+    guilties_key = "tmp_top_crash_guilties"
 
     if request.method == 'POST':
         if form.validate_on_submit() is False:
@@ -229,6 +230,9 @@ def crashes(filter=None):
                 endpoint = url_for('crashes_filter', filter=filter)
             else:
                 endpoint = url_for('crashes')
+
+            # Delete cached query when user updates a guilty with comment or hidden
+            uncache_data(guilties_key)
             return redirect(endpoint)
 
     all_classes = crash.get_all_classes()
@@ -237,7 +241,7 @@ def crashes(filter=None):
     build_pairs = get_cached_data("build_pairs", 600, Record.get_crashcnts_by_build, classes=backtrace_classes)
     charts = [{'column': 'classification', 'record_stats': class_pairs, 'type': 'pie', 'width': 6},
               {'column': 'build', 'record_stats': build_pairs, 'type': 'column', 'width': 6}]
-    tmp = get_cached_data("tmp_top_crash_guilties", 600, Record.get_top_crash_guilties, classes=backtrace_classes)
+    tmp = get_cached_data(guilties_key, 600, Record.get_top_crash_guilties, classes=backtrace_classes)
 
     if filter:
         guilties = crash.guilty_list_for_build(tmp, filter)
@@ -630,8 +634,15 @@ def get_cached_data(varname, expiration, funct, *args, **kwargs):
         print("%s Redis probably isn't running?" % str(e))
         # If we can't connect to redis, just query directly
         ret = funct(*args, **kwargs)
-
     return ret
+
+def uncache_data(varname):
+    try:
+        redis_client = redis.StrictRedis(decode_responses=True);
+        redis_client.delete(varname)
+    except redis.exceptions.ConnectionError as e:
+        print("%s Redis probably isn't running?" % str(e))
+    return
 
 load_plugins()
 
