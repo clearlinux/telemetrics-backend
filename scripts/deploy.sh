@@ -227,7 +227,7 @@ Flask-Migrate==2.1.0
 Flask-SQLAlchemy==2.2
 Flask-WTF==0.14.2
 itsdangerous==0.24
-Jinja2==2.9.6
+Jinja2==2.10.1
 Mako==1.0.7
 MarkupSafe==1.0
 psycopg2==2.7.6
