@@ -33,7 +33,7 @@ usage() {
   echo -en "\n"
   echo "Deploy snapshot of the telemetrics-backend"
   echo -en "\n"
-  echo -e "  -a\tPerform specified action (deploy, install, migrate, resetdb, restart, uninstall; default: deploy)"
+  echo -e "  -a\tPerform specified action (deploy, install, migrate, resetdb, restart, uninstall, upgradepkgs; default: deploy)"
   echo -e "  -d\tDistro to deploy to (ubuntu, centos or clr; default: ubuntu)"
   echo -e "  -h\tPrint these options"
   echo -e "  -H\tSet domain for deployment (only accepted value is \"localhost\" for now)"
@@ -70,7 +70,7 @@ while getopts "a:d:hH:r:s:t:u" arg; do
   case $arg in
     a)
       case $OPTARG in
-        deploy|install|migrate|resetdb|restart|uninstall)
+        deploy|install|migrate|resetdb|restart|uninstall|upgradepkgs)
           ACTION="$OPTARG"
           ;;
         *)
@@ -633,6 +633,14 @@ do_uninstall() {
   fi
 }
 
+do_upgrade_pkgs() {
+  pushd $REMOTE_APP_DIR
+  local REQS=$(mktemp)
+  _write_requirements $REQS
+  sudo bash -c "source venv/bin/activate && https_proxy=$https_proxy pip3 install -U -r $REQS"
+  popd
+}
+
 case $ACTION in
   deploy)
     do_deploy
@@ -651,6 +659,9 @@ case $ACTION in
     ;;
   uninstall)
     do_uninstall
+    ;;
+  upgradepkgs)
+    do_upgrade_pkgs
     ;;
   *)
     ;;
