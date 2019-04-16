@@ -353,6 +353,7 @@ EOF
 
 _get_db_pass() {
   local pass
+  local conf=$REMOTE_APP_DIR/telemetryui/telemetryui/config.py
 
   if [ ! -f $conf ]; then
     error "missing config.py file; must run the 'install' action first"
@@ -511,6 +512,7 @@ _clean_up() {
 }
 
 do_deploy() {
+  do_upgrade_pkgs
   _stage_from_$TYPE $SOURCE
   _deploy
   _clean_up

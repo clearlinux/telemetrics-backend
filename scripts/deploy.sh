@@ -526,6 +526,7 @@ _clean_up() {
 }
 
 do_deploy() {
+  do_upgrade_pkgs
   _stage_from_$TYPE $SOURCE
   _deploy
   _clean_up
