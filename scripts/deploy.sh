@@ -236,6 +236,7 @@ python-editor==1.0.3
 redis==3.1.0
 six==1.10.0
 SQLAlchemy==1.1.13
+uwsgidecorators==1.1.0
 Werkzeug==0.12.2
 WTForms==2.1
 EOF
@@ -245,7 +246,7 @@ _install_pip_pkgs() {
   local log=$REMOTE_APP_DIR/install.log
   local reqs=$1
   sudo rm -f "$log"
-  sudo bash -c "https_proxy=$https_proxy source venv/bin/activate && https_proxy=$https_proxy pip3 --log $log install -r $reqs uwsgi uwsgidecorators"
+  sudo bash -c "https_proxy=$https_proxy source venv/bin/activate && https_proxy=$https_proxy pip3 --log $log install -r $reqs"
 }
 
 _install_virtual_env() {
