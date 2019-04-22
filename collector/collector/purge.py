@@ -18,7 +18,6 @@ from .model import Record
 from . import app
 
 try:
-    import uwsgi
     from uwsgidecorators import cron
 
     PURGE_OLD_RECORDS = app.config.get("PURGE_OLD_RECORDS", True)
@@ -32,7 +31,7 @@ try:
                 Record.delete_records()
 
 except ImportError:
-        app.logger.info("Import error for uwsgi")
+        app.logger.info("Import error for uwsgidecorators")
 
 
 # vi: ts=4 et sw=4 sts=4
