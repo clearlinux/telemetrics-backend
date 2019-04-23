@@ -122,11 +122,8 @@ class Record(db.Model):
         self.bios_version = bios_version
         self.cpu_model = cpu_model
         self.event_id = event_id
+        self.payload = payload
 
-        try:
-            self.payload = payload.encode('utf-8')
-        except UnicodeError:
-            self.payload = payload.encode('latin-1')
 
     def __repr__(self):
         return "<Record(id='{}', class='{}', build='{}', created='{}')>".format(self.id, self.classification, self.build, strftime("%a, %d %b %Y %H:%M:%S", localtime(self.timestamp_client)))
