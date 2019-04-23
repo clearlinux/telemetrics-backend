@@ -378,21 +378,21 @@ _get_db_pass() {
 _config_nginx_ubuntu() {
   sudo rm -f /etc/nginx/sites-enabled/default
   sudo rm -f /etc/nginx/sites-enabled/sites_nginx.conf
-  sudo ln -sf $REMOTE_APP_DIR/sites_nginx.conf /etc/nginx/sites-enabled/
+  sudo ln -sf $REMOTE_APP_DIR/sites_nginx_full.conf /etc/nginx/sites-enabled/sites_nginx.cnf
 }
 
 _config_nginx_clr() {
   sudo mkdir -pv /etc/nginx/conf.d
   sudo cp -av /usr/share/nginx/conf/nginx.conf.example /etc/nginx/nginx.conf
-  sudo ln -sf $REMOTE_APP_DIR/sites_nginx.conf /etc/nginx/conf.d/
+  sudo ln -sf $REMOTE_APP_DIR/sites_nginx_full.conf /etc/nginx/conf.d/sites_nginx.conf
   sudo systemctl enable nginx
 }
 
 _config_nginx_centos() {
   sudo mkdir -pv /etc/nginx/conf.d
   sudo cp -av $scripts_path/nginx.conf /etc/nginx/nginx.conf
-  sudo ln -sf $REMOTE_APP_DIR/sites_nginx.conf /etc/nginx/conf.d/
-  sudo chcon -t httpd_config_t $REMOTE_APP_DIR/sites_nginx.conf
+  sudo ln -sf $REMOTE_APP_DIR/sites_nginx_full.conf /etc/nginx/conf.d/sites_nginx.conf
+  sudo chcon -t httpd_config_t $REMOTE_APP_DIR/sites_nginx_full.conf
   sudo systemctl enable nginx
 }
 
@@ -472,7 +472,7 @@ _deploy() {
   _subst_config "$scripts_path/$COLLECTOR_INI" "$collector_path/"
   _subst_config "$scripts_path/$TELEMETRYUI_INI" "$telemetryui_path/"
   _subst_config "$scripts_path/uwsgi.conf"
-  _subst_config "$scripts_path/sites_nginx.conf"
+  _subst_config "$scripts_path/sites_nginx_full.conf"
   # get uwsgi location, in case this was installed during script exec
   UWSGI_PATH=$(type -p uwsgi)
   _subst_config "$scripts_path/uwsgi.service"
@@ -493,7 +493,7 @@ _deploy() {
   sudo cp -af $shared_path $REMOTE_APP_DIR/
 
   # Install nginx config
-  sudo cp -af $scripts_path/sites_nginx.conf $REMOTE_APP_DIR/
+  sudo cp -af $scripts_path/sites_nginx_full.conf $REMOTE_APP_DIR/
 
   # Install uwsgi config
   _config_uwsgi_${DISTRO}
@@ -516,7 +516,7 @@ _deploy() {
 
   # Cert configuration
   if [ ! -f /etc/nginx/ssl/telemetry.cert.pem ]; then
-    sudo sed -i.backup 's/\(ssl_.*\)/# \1/;s/\(listen.*443 ssl\)/# \1/' $REMOTE_APP_DIR/sites_nginx.conf
+    sudo sed -i.backup 's/\(ssl_.*\)/# \1/;s/\(listen.*443 ssl\)/# \1/' $REMOTE_APP_DIR/sites_nginx_full.conf
   fi
 }
 
