@@ -235,7 +235,7 @@ python-dateutil==2.6.1
 python-editor==1.0.3
 redis==3.1.0
 six==1.10.0
-SQLAlchemy==1.1.13
+SQLAlchemy==1.3.3
 uwsgidecorators==1.1.0
 Werkzeug==0.12.2
 WTForms==2.1
