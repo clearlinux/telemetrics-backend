@@ -28,9 +28,7 @@ from .lib.validation import (
     MAX_NUM_RECORDS,
     record_format_version_headers_validation,
     InvalidUsage)
-from .model import (
-    Classification,
-    Build)
+from .model import Record
 from .crash import (
     process_guilties,
     is_crash_classification)
@@ -181,15 +179,7 @@ def collector_post_handler():
         # fallback to Latin-1, since it accepts all byte values
         payload = request.data.decode('latin-1')
 
-    db_class = Classification.query.filter_by(classification=classification).first()
-    if db_class is None:
-        db_class = Classification(classification)
-
-    db_build = Build.query.filter_by(build=build).first()
-    if db_build is None:
-        db_build = Build(build)
-
-    db_rec = Record.create(machine_id, host_type, severity, db_class, db_build, architecture, kernel_version,
+    db_rec = Record.create(machine_id, host_type, severity, classification, build, architecture, kernel_version,
                            record_format_version, ts_capture, ts_reception, payload_format_version, os_name,
                            board_name, bios_version, cpu_model, event_id, external, payload)
 
