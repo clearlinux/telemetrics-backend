@@ -96,10 +96,13 @@
     </table>
     </div>
     <div class="col-md-6" style="min-height: 500px;">
-        <canvas id="pie-classification" width="450" height="450"></canvas>
+        <canvas id="bar-reports-by-status" width="450" height="450"></canvas>
     </div>
     <div class="col-md-6" style="min-height: 500px;">
-        <canvas id="bar-reports" width="450" height="450"></canvas>
+        <canvas id="bar-reports-by-build" width="450" height="450"></canvas>
+    </div>
+    <div class="col-md-6" style="min-height: 500px;">
+        <canvas id="pie-classification" width="450" height="450"></canvas>
     </div>
 
 </div>
@@ -136,9 +139,14 @@ $(document).on('change', '#top-mce', function () {
             [{% for s in charts[0].record_stats %} "{{ s[1] }}", {% endfor %}]);
 
         telemetryUI.renderMCEReports(
-            document.getElementById("bar-reports").getContext("2d"),
+            document.getElementById("bar-reports-by-build").getContext("2d"),
             [{% for s in charts[1].record_stats %} "{{ s[0] }}", {% endfor %}],
             [{% for s in charts[1].record_stats %} "{{ s[1] }}", {% endfor %}]);
+
+	telemetryUI.renderMCEStatus(
+            document.getElementById("bar-reports-by-status").getContext("2d"),
+            [{% for s in charts[2].record_stats %} "{{ s[0] }}", {% endfor %}],
+            [{% for s in charts[2].record_stats %} "{{ s[1] }}", {% endfor %}]);
 
         var fullmce = {{ fullmce|safe }};
         for (clas in fullmce){
