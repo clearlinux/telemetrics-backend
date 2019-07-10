@@ -140,8 +140,55 @@
         rootObj.newChart(ctx, "bar", data, options);
     }
 
+    function renderMCEStatus(ctx, labels, values){
+
+        var data = {
+            labels: labels,
+            datasets:[
+                {
+                    label: "MCE counts by status",
+                    data: values
+                }
+            ]
+        };
+
+        var options = {
+            legend: { display: false },
+            title: {
+                display: true,
+                text: "MCE reports by status",
+                fontSize: 18
+            },
+            scales: {
+                yAxes: [{
+                    scaleLabel: {
+                        display: true,
+                        labelString: "MCE count",
+                        fontSize: 15,
+                        fontStyle: "italic"
+                    },
+                    ticks: {
+                        beginAtZero: true
+                    }
+                }],
+                xAxes: [{
+                    scaleLabel: {
+                        display: true,
+                        labelString: "Last 32 bits of status code",
+                        fontSize: 15,
+                        fontStyle: "italic"
+                    },
+                    barThickness: 15
+                }]
+            }
+        };
+
+        rootObj.newChart(ctx, "bar", data, options);
+    }
+
     rootObj.renderMCEClass = renderMCEClass;
     rootObj.renderMCEReports = renderMCEReports;
+    rootObj.renderMCEStatus = renderMCEStatus;
     rootObj.parseMCEChartData = parseMCEChartData;
     rootObj.renderOneChart = renderOneChart;
 });

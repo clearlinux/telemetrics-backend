@@ -469,6 +469,7 @@ def mce():
     maxcnt = 0
     by_machine_id = {}
     by_builds = {}
+    by_mce_status = {}
     week_rec_map = {}
     class_rec_map = {}
     for record in records:
@@ -483,6 +484,13 @@ def mce():
         by_machine_id[record.machine_id]["recordscnt"] += 1
         by_builds.setdefault(record.build, 0)
         by_builds[record.build] += 1
+        status_match = re.search('STATUS.*([A-Fa-f0-9]{8}) MCGSTATUS', record.payload)
+        if status_match:
+            status = status_match.group(1)
+            if status in by_mce_status:
+                by_mce_status[status] += 1
+            else:
+                by_mce_status[status] = 1
     for machine_id in list(by_machine_id.keys()):
         builds_cnt = by_machine_id[machine_id]["builds"]
         maxcnt = max(list(builds_cnt.values()) + [maxcnt])
@@ -493,7 +501,8 @@ def mce():
         })
     top10.sort(key=lambda x: x["recordscnt"], reverse=True)
     charts = [{'column': 'classification', 'record_stats': class_rec_map.items(), 'type': 'pie', 'width': 6},
-              {'column': 'build', 'record_stats': sorted(by_builds.items(), key=lambda x: x[0]), 'type': 'column', 'width': 6}]
+              {'column': 'build', 'record_stats': sorted(by_builds.items(), key=lambda x: x[0]), 'type': 'column', 'width': 6},
+              {'column': 'status', 'record_stats': sorted(by_mce_status.items(), key=lambda x: x[0]), 'type': 'column', 'width': 6}]
     return render_template('mce.html', charts=charts, top10=top10, builds=sorted(by_builds.keys()), maxcnt=maxcnt, fullmce=week_rec_map)
 
 
