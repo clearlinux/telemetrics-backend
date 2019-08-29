@@ -329,6 +329,25 @@ flask db upgrade
    `telemetryui/migrations/versions` directory), push it to your topic branch,
    and redeploy to test the new migration.
 
+## Using docker for development
+
+Update configuration ```/telemetryui/telemetryui/config_local.py``` database host
+and password (line 29) to:
+
+```
+SQLALCHEMY_DATABASE_URI = 'postgres://postgres:postgres@db/telemetry'
+```
+
+Once this change is done the environment can be launch, if the containers do not
+exist it has to be build first:
+
+```
+# Build
+docker-compose -f docker/docker-compose.yml build --force-rm
+# Launch
+docker-compose -f docker/docker-compose.yml up
+```
+
 ## Software License
 
 The telemetrics-backend project is licensed under the Apache License, Version
