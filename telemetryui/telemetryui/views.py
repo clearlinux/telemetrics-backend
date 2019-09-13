@@ -534,13 +534,6 @@ def updates():
     return json.dumps(updates)
 
 
-@app.route('/telemetryui/update_matrix')
-def swupd_matrix():
-    update_msgs_query = get_cached_data("update_msgs_query", 600, Record.get_update_msgs)
-    updates = compute_update_matrix(update_msgs_query)
-    return render_template('update_matrix.html', updates=updates)
-
-
 @app.route('/telemetryui/population')
 def population():
     charts = [{'id': 'Overall', 'time': None, 'timestr': 'Overall'},
