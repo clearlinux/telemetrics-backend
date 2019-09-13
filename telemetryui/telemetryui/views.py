@@ -237,10 +237,6 @@ def crashes(filter=None):
 
     all_classes = crash.get_all_classes()
     backtrace_classes = crash.get_backtrace_classes()
-    class_pairs = get_cached_data("class_pairs", 600, Record.get_crashcnts_by_class, classes=all_classes)
-    build_pairs = get_cached_data("build_pairs", 600, Record.get_crashcnts_by_build, classes=backtrace_classes)
-    charts = [{'column': 'classification', 'record_stats': class_pairs, 'type': 'pie', 'width': 6},
-              {'column': 'build', 'record_stats': build_pairs, 'type': 'column', 'width': 6}]
     tmp = get_cached_data(guilties_key, 600, Record.get_top_crash_guilties, classes=backtrace_classes)
 
     if filter:
@@ -248,7 +244,7 @@ def crashes(filter=None):
         return render_template('crashes_filter.html', guilties=guilties, build=filter, form=form)
     else:
         out_builds, guilties = crash.guilty_list_per_build(tmp)
-        return render_template('crashes.html', charts=charts, guilties=guilties, builds=out_builds, form=form)
+        return render_template('crashes.html', guilties=guilties, builds=out_builds, form=form)
 
 
 @app.route('/telemetryui/crashes/<string:filter>', methods=['GET', 'POST'])
