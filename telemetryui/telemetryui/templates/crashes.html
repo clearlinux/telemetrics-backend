@@ -156,23 +156,6 @@
     });
 </script>
 
-<script src="/telemetryui/static/js/crashes.js"></script>
-<script>
-    (function(){
-        var labels = [{% for s in charts[0].record_stats %} "{{ s[0] }}", {% endfor %}];
-        var values = [{% for s in charts[0].record_stats %} "{{ s[1] }}", {% endfor %}];
-        var labels1 = [{% for s in charts[1].record_stats %} "{{ s[0] }}", {% endfor %}];
-        var values1 = [{% for s in charts[1].record_stats %} "{{ s[1] }}", {% endfor %}];
-
-        var ctx = document.getElementById("pie-classification").getContext("2d");
-        telemetryUI.renderCrashStats(ctx, labels, values);
-
-        var ctx1 = document.getElementById("bar-reports").getContext("2d");
-        telemetryUI.renderCrashReports(ctx1, labels1, values1);
-    })();
-</script>
-
-
 {% endblock %}
 
 
