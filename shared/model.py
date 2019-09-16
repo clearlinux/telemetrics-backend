@@ -313,6 +313,7 @@ class Record(db.Model):
     @staticmethod
     def get_builds():
         q = db.session.query(Record.build).distinct()
+        q = q.filter(Record.build.op('~')('^[0-9]+$'))
         q = q.order_by(Record.build)
         return sorted(q.all(), key=lambda x: LooseVersion(x[0]), reverse=True)
 
