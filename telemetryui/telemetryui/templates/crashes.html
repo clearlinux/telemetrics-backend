@@ -24,6 +24,8 @@
     <h1>Crash stats</h1>
     <h2>Top Crashes</h2>
 
+    {% set CRASH_PAGE_SIZE = 10 %}
+
     {%- with messages = get_flashed_messages(with_categories=true) %}
     {%- if messages %}
     {%- for category, m in messages %}
@@ -36,14 +38,14 @@
 
     {%- if guilties %}
     <table class="table table-bordered table-striped table-condensed">
-        <caption>Top 10 crashes in the last 7 days, with frequency per build</caption>
+        <caption>Top crashes in the last 7 days, with frequency per build</caption>
         <thead>
             <th>#</th>
             <th>Guilty</th>
-            <th><a href="{{ url_for('crashes_filter', filter='overall') }}">Total</a></th>
+            <th><a href="{{ url_for('crashes', filter='overall') }}">Total</a></th>
             {%- for b in builds %}
             {%- set currentbuild = b[0] %}
-            <th><a href="{{ url_for('crashes_filter', filter=currentbuild) }}">{{ b[0] }}</a></th>
+            <th><a href="{{ url_for('crashes', filter=currentbuild) }}">{{ b[0] }}</a></th>
             {%- endfor %}
             <th>Comment</th>
         </thead>
@@ -51,7 +53,7 @@
             {%- set maxtotal = guilties[0].total %}
             {%- for g in guilties %}
             <tr>
-            <th scope="row">{{ loop.index }}</th>
+            <th scope="row">{{ loop.index + ((page - 1) * CRASH_PAGE_SIZE) }}</th>
             <td>
                 <a href="/telemetryui/crashes/guilty_details/{{ g.guilty_id }}" data-toggle="tooltip" data-placement="left" title="{{ g.guilty }}">{{ g.guilty|truncate(30, True) }}</a>
                 <button id="more_button" type="button" data-toggle="modal" data-target="#myModal" data-whatever="{{ g.comment }}" data-gid="{{ g.guilty_id }}" style="width: 34px;">...</button>
@@ -91,6 +93,24 @@
             {%- endfor %}
         </tbody>
     </table>
+
+    <!-- Crash list pagination -->
+    {%- if pages != 0 %}
+    <nav aria-label="Crash pages">
+        <ul class="pagination">
+        {%- for page_number in range(0, pages + 1) %}
+            {%- if page_number == page - 1 %}
+            <li class="page-item active">
+            {%- else %}
+            <li class="page-item">
+            {%- endif %}
+                <a class="page-link" href="/telemetryui/crashes/page/{{ page_number + 1 }}">{{ page_number + 1 }}</a>
+            </li>
+        {%- endfor %}
+        </ul>
+    </nav>
+    {%- endif %}
+
     {%- else %} {# guilties #}
     <div class="alert alert-info" role="alert">No guilties data to display.</div>
     {%- endif %} {# guilties #}
