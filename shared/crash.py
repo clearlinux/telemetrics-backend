@@ -15,6 +15,7 @@
 #
 
 import json
+import math
 from operator import itemgetter
 from collections import namedtuple
 import subprocess
@@ -60,6 +61,7 @@ other_classes = [
     'org.clearlinux/crash/error'
 ]
 
+CRASH_PAGE_SIZE = 10
 
 def get_all_classes():
     return backtrace_classes + other_classes
@@ -259,7 +261,7 @@ def process_guilties_sync(**args):
     _process_guilties(args)
 
 
-def guilty_list_per_build(guilties):
+def guilty_list_per_build(guilties, page=1):
     # TODO: should compute max values per build with a subquery instead
     build_maxcount = {}
 
@@ -297,9 +299,10 @@ def guilty_list_per_build(guilties):
         else:
             build_maxcount[build] = count
         newlist.append(entry)
-
     # We only care about the top 10 guilties
-    newlist = sorted(newlist, key=itemgetter('total'), reverse=True)[:10]
+    start = CRASH_PAGE_SIZE * (page - 1)
+    end = (CRASH_PAGE_SIZE * page)
+    newlist = sorted(newlist, key=itemgetter('total'), reverse=True)[start:end]
     for guilty in newlist:
         for build in guilty['builds']:
             buildset.add(build[0])
@@ -325,7 +328,7 @@ def guilty_list_per_build(guilties):
     for i, b in enumerate(newlist):
         newlist[i]['builds'] = sorted(newlist[i]['builds'], key=lambda b: int(b[0]), reverse=True)
 
-    return (buildlist, newlist)
+    return math.ceil(len(newlist)/CRASH_PAGE_SIZE), buildlist, newlist
 
 
 def guilty_list_for_build(guilties, filter='overall'):
@@ -353,7 +356,7 @@ def guilty_list_for_build(guilties, filter='overall'):
             newlist.append(entry)
 
     # We only care about the top 10 guilties
-    newlist = sorted(newlist, key=itemgetter('total'), reverse=True)[:10]
+    newlist = sorted(newlist, key=itemgetter('total'), reverse=True)[:CRASH_PAGE_SIZE]
 
     return newlist
 

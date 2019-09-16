@@ -194,10 +194,11 @@ def stats():
 
 
 @app.route('/telemetryui/crashes', methods=['GET', 'POST'])
-def crashes(filter=None):
+@app.route('/telemetryui/crashes/page/<int:page>', methods=['GET'])
+@app.route('/telemetryui/crashes/<string:filter>', methods=['GET', 'POST'])
+def crashes(filter=None, page=1):
     form = forms.GuiltyDetailsForm()
     guilties_key = "tmp_top_crash_guilties"
-
     if request.method == 'POST':
         if form.validate_on_submit() is False:
             for e in form.comment.errors:
@@ -241,15 +242,10 @@ def crashes(filter=None):
 
     if filter:
         guilties = crash.guilty_list_for_build(tmp, filter)
-        return render_template('crashes_filter.html', guilties=guilties, build=filter, form=form)
+        return render_template('crashes_filter.html', guilties=guilties, build=filter, form=form, pages=0, page=0)
     else:
-        out_builds, guilties = crash.guilty_list_per_build(tmp)
-        return render_template('crashes.html', guilties=guilties, builds=out_builds, form=form)
-
-
-@app.route('/telemetryui/crashes/<string:filter>', methods=['GET', 'POST'])
-def crashes_filter(filter='overall'):
-    return crashes(filter)
+        pages, out_builds, guilties = crash.guilty_list_per_build(tmp, page=page)
+        return render_template('crashes.html', guilties=guilties, builds=out_builds, form=form, pages=pages, page=page)
 
 
 @app.route('/telemetryui/crashes/guilty_details/<int:id>')
