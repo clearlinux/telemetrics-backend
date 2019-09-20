@@ -44,6 +44,9 @@ import redis
 
 RECORDS_PER_PAGE = app.config.get('RECORDS_PER_PAGE', 50)
 MAX_RECORDS_PER_PAGE = app.config.get('MAX_RECORDS_PER_PAGE', 1000)
+REDIS_HOSTNAME = app.config.get('REDIS_HOSTNAME', 'localhost')
+REDIS_PORT = app.config.get('REDIS_PORT', 6379)
+REDIS_PASSWD = app.config.get('REDIS_PASSWD', None)
 
 @app.route('/telemetryui/', methods=['GET', 'POST'])
 @app.route('/telemetryui/records', methods=['GET', 'POST'])
@@ -612,8 +615,10 @@ def load_plugins():
 
 def get_cached_data(varname, expiration, funct, *args, **kwargs):
     try:
-        # Default parameters are to run on localhost with port 6379
-        redis_client = redis.StrictRedis(decode_responses=True);
+        redis_client = redis.StrictRedis(decode_responses=True,
+                                         host=REDIS_HOSTNAME,
+                                         port=REDIS_PORT,
+                                         password=REDIS_PASSWD,);
         # Try to get data from redis first
         ret = redis_client.get(varname)
         if ret is not None:
