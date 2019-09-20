@@ -40,6 +40,8 @@ class Config(object):
     # can be found under 'telemetryui/plugins/demo'
     # PLUGINS = ['demo']
 
+    # Redis server hostname
+    REDIS_HOSTNAME = 'localhost'
 
 class Testing(Config):
     TESTING = True
