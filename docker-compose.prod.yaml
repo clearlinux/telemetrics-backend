@@ -1,0 +1,57 @@
+version: '3.7'
+services:
+  db:
+    image: postgres:latest
+    restart: always
+    volumes:
+      - type: volume
+        source: telemetry-data
+        target: /var/lib/postgresql/data/pgdata
+    env_file:
+      - ./services/production.env
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_DB: telemetry
+      POSTGRES_USER: telemetry
+
+  nginx:
+    image: telemetry/proxy:1.0
+    build:
+      context: ./services/nginx
+    volumes:
+      - "telemetry-socket-volume:/var/run/uwsgi/"
+      - "telemetry-logs:/var/log/nginx"
+    ports:
+      - 80:80
+      - 443:443
+
+  collector:
+    image: telemetry/collector:1.0
+    volumes:
+      - "telemetry-socket-volume:/var/www/collector/socket"
+      - "telemetry-logs:/var/www/collector/log"
+    build:
+      context: .
+      dockerfile: ./services/collector/Dockerfile
+    env_file:
+      - services/collector/.env
+    depends_on: ["db"]
+    command: uwsgi --ini /var/www/collector/collector.ini
+
+  webapp:
+    image: telemetry/webapp:1.0
+    volumes:
+      - "telemetry-socket-volume:/var/www/webapp/socket"
+      - "telemetry-logs:/var/www/webapp/log"
+    build:
+      context: .
+      dockerfile: ./services/webapp/Dockerfile
+    env_file:
+      - ./services/webapp/.env
+    depends_on: ["db"]
+    command: uwsgi --ini /var/www/webapp/webapp.ini
+
+volumes:
+  telemetry-socket-volume:
+  telemetry-logs:
+  telemetry-data:
