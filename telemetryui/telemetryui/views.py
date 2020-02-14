@@ -38,7 +38,6 @@ from .model import (
     Record,
     Guilty,
     GuiltyBlacklist)
-from .updates import compute_update_matrix
 from flask import Response
 import redis
 
