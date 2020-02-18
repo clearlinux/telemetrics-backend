@@ -56,6 +56,16 @@ services:
     depends_on: ["db", "redis"]
     command: uwsgi --ini /var/www/webapp/webapp.ini
 
+  migrate:
+    image: telemetry/webapp:1.0
+    env_file:
+      - ./services/production.env
+    environment:
+      FLASK_APP: /var/www/webapp/run.py
+    working_dir: /var/www/webapp
+    depends_on: ["db"]
+    command: flask db upgrade
+
 volumes:
   telemetry-socket-volume:
   telemetry-logs:
