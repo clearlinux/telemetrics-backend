@@ -19,7 +19,7 @@ services:
       context: ./services/nginx
     volumes:
       - "telemetry-socket-volume:/var/run/uwsgi/"
-      - "telemetry-logs:/var/log/nginx"
+      - "telemetry-nginx-logs:/var/log/nginx"
     ports:
       - 80:80
       - 443:443
@@ -34,7 +34,7 @@ services:
     image: telemetry/collector:1.0
     volumes:
       - "telemetry-socket-volume:/var/www/collector/socket"
-      - "telemetry-logs:/var/www/collector/log"
+      - "telemetry-uwsgi-logs:/var/www/collector/log"
     build:
       context: .
       dockerfile: ./services/collector/Dockerfile
@@ -47,7 +47,7 @@ services:
     image: telemetry/webapp:1.0
     volumes:
       - "telemetry-socket-volume:/var/www/webapp/socket"
-      - "telemetry-logs:/var/www/webapp/log"
+      - "telemetry-uwsgi-logs:/var/www/webapp/log"
     build:
       context: .
       dockerfile: ./services/webapp/Dockerfile
@@ -68,5 +68,6 @@ services:
 
 volumes:
   telemetry-socket-volume:
-  telemetry-logs:
+  telemetry-uwsgi-logs:
+  telemetry-nginx-logs:
   telemetry-data:
