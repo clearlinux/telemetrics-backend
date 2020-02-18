@@ -28,14 +28,6 @@ app = Flask(__name__)
 db = SQLAlchemy()
 app.config.from_object(config.Config)
 
-try:
-    # try importing from the local dev configuration if it exists
-    from . import config_local
-    app.config.from_object(config_local.Config)
-except Exception as e:
-    print(e)
-    pass
-
 from .model import *
 from . import report_handler
 

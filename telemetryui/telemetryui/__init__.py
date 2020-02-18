@@ -1,5 +1,5 @@
 #
-# Copyright 2015-2017 Intel Corporation
+# Copyright 2015-2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,13 +29,6 @@ import importlib
 
 app = Flask(__name__, static_folder="static", static_url_path="/telemetryui/static")
 app.config.from_object(config.Config)
-
-try:
-   # try importing from the local dev configuration if it exists
-   from . import config_local
-   app.config.from_object(config_local.Config)
-except:
-   pass
 
 from . import views
 
