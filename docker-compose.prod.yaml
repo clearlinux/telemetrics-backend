@@ -12,7 +12,6 @@ services:
     environment:
       PGDATA: /var/lib/postgresql/data/pgdata
       POSTGRES_DB: telemetry
-      POSTGRES_USER: telemetry
 
   nginx:
     image: telemetry/proxy:1.0
@@ -25,6 +24,12 @@ services:
       - 80:80
       - 443:443
 
+  redis:
+    image: redis:latest
+    restart: always
+    env_file:
+      - ./services/production.env
+
   collector:
     image: telemetry/collector:1.0
     volumes:
@@ -34,8 +39,8 @@ services:
       context: .
       dockerfile: ./services/collector/Dockerfile
     env_file:
-      - services/collector/.env
-    depends_on: ["db"]
+      - services/production.env
+    depends_on: ["db", "redis"]
     command: uwsgi --ini /var/www/collector/collector.ini
 
   webapp:
@@ -47,8 +52,8 @@ services:
       context: .
       dockerfile: ./services/webapp/Dockerfile
     env_file:
-      - ./services/webapp/.env
-    depends_on: ["db"]
+      - ./services/production.env
+    depends_on: ["db", "redis"]
     command: uwsgi --ini /var/www/webapp/webapp.ini
 
 volumes:
