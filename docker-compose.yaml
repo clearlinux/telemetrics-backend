@@ -4,27 +4,17 @@ services:
     image: postgres:latest
     networks:
       - backend
-    restart: always
-    volumes:
-      - type: volume
-        source: telemetry-data
-        target: /var/lib/postgresql/data/pgdata
     env_file:
-      - ./services/production.env
-    environment:
-      PGDATA: /var/lib/postgresql/data/pgdata
-      POSTGRES_DB: telemetry
+      - ./services/testing.env
 
   nginx:
     image: telemetry/proxy:1.0
     networks:
       - frontend
-    restart: always
-    build:
-      context: ./services/nginx
     volumes:
       - "telemetry-socket-volume:/var/run/uwsgi/"
-      - "telemetry-nginx-logs:/var/log/nginx"
+    build:
+      context: ./services/nginx
     ports:
       - 80:80
       - 443:443
@@ -33,9 +23,8 @@ services:
     image: redis:latest
     networks:
       - backend
-    restart: always
     env_file:
-      - ./services/production.env
+      - ./services/testing.env
 
   collector:
     image: telemetry/collector:1.0
@@ -43,13 +32,11 @@ services:
       - backend
     volumes:
       - "telemetry-socket-volume:/var/www/collector/socket"
-      - "telemetry-uwsgi-logs:/var/www/collector/log"
-    restart: always
     build:
       context: .
       dockerfile: ./services/collector/Dockerfile
     env_file:
-      - services/production.env
+      - services/testing.env
     depends_on: ["db", "redis"]
     command: uwsgi --ini /var/www/collector/collector.ini
 
@@ -59,13 +46,11 @@ services:
       - backend
     volumes:
       - "telemetry-socket-volume:/var/www/webapp/socket"
-      - "telemetry-uwsgi-logs:/var/www/webapp/log"
-    restart: always
     build:
       context: .
       dockerfile: ./services/webapp/Dockerfile
     env_file:
-      - ./services/production.env
+      - ./services/testing.env
     depends_on: ["db", "redis"]
     command: uwsgi --ini /var/www/webapp/webapp.ini
 
@@ -74,7 +59,7 @@ services:
     networks:
       - backend
     env_file:
-      - ./services/production.env
+      - ./services/testing.env
     environment:
       FLASK_APP: /var/www/webapp/run.py
     working_dir: /var/www/webapp
@@ -83,9 +68,6 @@ services:
 
 volumes:
   telemetry-socket-volume:
-  telemetry-uwsgi-logs:
-  telemetry-nginx-logs:
-  telemetry-data:
 
 networks:
   frontend:
