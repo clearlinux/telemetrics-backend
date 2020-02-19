@@ -2,7 +2,7 @@
 
 set -e
 
-until PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOSTNAME -U "postgres" -c '\q'; do
+until python3 /var/www/webapp/entrypoint.py; do
   >&2 echo "Postgres is unavailable - sleeping"
   sleep 1
 done
