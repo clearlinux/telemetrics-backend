@@ -2,6 +2,8 @@ version: '3.7'
 services:
   db:
     image: postgres:latest
+    networks:
+      - backend
     restart: always
     volumes:
       - type: volume
@@ -15,6 +17,8 @@ services:
 
   nginx:
     image: telemetry/proxy:1.0
+    networks:
+      - frontend
     build:
       context: ./services/nginx
     volumes:
@@ -26,12 +30,16 @@ services:
 
   redis:
     image: redis:latest
+    networks:
+      - backend
     restart: always
     env_file:
       - ./services/production.env
 
   collector:
     image: telemetry/collector:1.0
+    networks:
+      - backend
     volumes:
       - "telemetry-socket-volume:/var/www/collector/socket"
       - "telemetry-uwsgi-logs:/var/www/collector/log"
@@ -45,6 +53,8 @@ services:
 
   webapp:
     image: telemetry/webapp:1.0
+    networks:
+      - backend
     volumes:
       - "telemetry-socket-volume:/var/www/webapp/socket"
       - "telemetry-uwsgi-logs:/var/www/webapp/log"
@@ -58,6 +68,8 @@ services:
 
   migrate:
     image: telemetry/webapp:1.0
+    networks:
+      - backend
     env_file:
       - ./services/production.env
     environment:
@@ -71,3 +83,10 @@ volumes:
   telemetry-uwsgi-logs:
   telemetry-nginx-logs:
   telemetry-data:
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: overlay
+    internal: true
