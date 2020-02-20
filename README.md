@@ -11,118 +11,74 @@ It consists of a Flask application `telemetryui`,
 that exposes several views to visualize the telemetry data. The `telemetryui`
 app also provides a REST API to perform queries on the data.
 
-The applications run within a web stack, using the nginx web server, the uWSGI
-application server, and PostgreSQL as the underlying database server.
-
-The Flask apps have several other dependencies and are listed below.
-
-* SQLAlchemy - for performing queries on the PostgreSQL database
-* Flask-SQLAlchemy - for SQLAlchemy integration with Flask
-* WTForms - for HTML form validation and rendering
-* Flask-WTF - for WTForms integration with Flask
-* alembic - for performing database migrations
-* Flask-Migrate - for alembic integration with Flask
-* Jinja2 - templating engine used by Flask
-* Bootstrap - for styling of Jinja2 templates
-* jQuery - for client-side scripting in templates
-* Chart.js - for rendering of charts in templates
+The Flask apps have several dependencies listed [here](services/collector/requirements.txt)
+and [here](services/telemetryui/requirements.txt). The testing infrastructure
+is described by [this](docker-compose.yaml) docker-compose.yaml and production by
+[this](docker-compose.prod.yaml) docker-compose.prod.yaml
 
 ## Security considerations
 
 The telemetrics-backend was written with a particular deployment scenario in
-mind: single server/VM hosting and running on an internal LAN (e.g. a corporate
-network not exposed to the public internet). Also, no identity management, user
-authentication, or role-based access controls have yet been implemented for the
-applications.
+mind: internal LAN (e.g. a corporate network not exposed to the public internet).
+Also, no identity management, user authentication, or role-based access controls
+have yet been implemented for the applications.
 
 To control access to the applications, it is recommended that system
 administrators leverage web server authentication.
 
-Regarding alternate deployment scenarios, one might want to host the telemetryui
-and database on three separate servers/VMs; and implement network
-access controls for these systems. The in-tree deployment script does not
-support these types of deployments, but with minimal modification to the
-source, they should be possible.
+To enable HTTPS connections replace the placeholders files [here](services/nginx/telemetry.cert.pem)
+and [here](services/nginx/telemetry.key.pem) with a certificate and private key
+for your server. In addition uncomment lines 3, 9, and 10 in the [sites](services/nginx/sites.conf).
+configuration file.
 
-## Installation
+## Deployment
 
-To install the telemetrics-backend, a deployment/installation script is
-provided that auto-installs required dependencies for the applications,
-configures nginx and uwsgi, deploys snapshots of the applications, and starts
-all required services. The script is named `deploy.sh` and lives in the
-scripts/ directory in this repository.
-
-The script supports installation to the following Linux distributions: Ubuntu
-Server 16.04 (or newer), Clear Linux OS for Intel Architecture (any recent
-build), and openSUSE Leap 15.0.
-
-### Running the deployment script
-
-To see all options, run:
+The application is containerized to simplify the deployment. 
 
 ```
-$ cd scripts
-$ ./deploy.sh -h
+# checkout latest tag source
+git clone --branch latest https://github.com/clearlinux/telemetrics-backend.git
+cd telemetrics-backend
 ```
 
-#### Prerequisites
-
-* Copy the deploy.sh script to the system where you will be installing
-  telemetrics-backend (e.g. using `scp`). Remote installations are not yet
-  supported.
-
-* On Ubuntu Server, make sure you `apt-get update` before continuing.
-
-* Install `sudo` if needed, and add your user to sudoers.
-
-* Set the `https_proxy` variable in the shell environment if your system is
-  behind a proxy.
-
-#### Installation
-
-To perform a fresh installation on Ubuntu Server, run the following locally on
-the system:
+For a deployment in production make sure to update the value for POSTGRES_PASSWORD otherwise
+the build step will fail.
 
 ```
-$ ./deploy.sh -H localhost -a install
+# update services/production.env
+vi services/production.env
+
+# build production environment
+sudo -E docker-compose --file ./docker-compose.prod.yaml build --force-rm
 ```
 
-If you are installing on Clear Linux OS, run:
+Once the images are build successfully the environment can be started using:
 
 ```
-$ ./deploy.sh -H localhost -d clr -a install
+# start environment on the background
+sudo -E docker-compose --file ./docker-compose.prod.yaml up --detach
 ```
 
-#### Installation Notes
+### Deploying as systemd service
 
-During script execution, you will be prompted for user input:
-
-* The first prompt begins with "DB password:", asking for a password to set for
-  the `telemetry` database. If you do not enter a value before pressing ENTER,
-  the password will be `postgres`.
-
-* If your sudo access requires a password, you will be prompted for that
-  password in the course of the installation.
-
-* When installing to Clear Linux OS, you will be prompted to enter a password
-  for the `postgres` user account. This is necessary because Clear Linux OS by
-  default ships with a `postgres` system account, not a user account. Thus the
-  script modifies the account and requires a password set to properly configure
-  PostgreSQL.
-
-When the installation is complete, you will see the following message:
+To deploy the environment as a systemd service use the following example:
 
 ```
-Install complete (installation folder: /var/www/telemetry)
+[Unit]
+Description=Telemetry Backend
+Requires=docker.service
+After=docker.service
+
+[Service]
+Restart=always
+WorkingDirectory=/srv/telemetrics-backend
+ExecStart=/usr/local/bin/docker-compose --file docker-compose.prod.yaml up
+ExecStop=/usr/local/bin/docker-compose --file docker-compose.prod.yaml down -v
+
+[Install]
+WantedBy=multi-user.target
 ```
 
-#### Other options
-
-Other useful options for `deploy.sh` include `-r` and `-s`. The `-r` option
-sets the location for the telemetrics-backend git source repository you are
-working with. Its default value is the upstream repo location on
-github.com/clearlinux. The `-s` option lets you select a different git branch
-to install/deploy from rather than "master", the default value.
 
 ## `telemetryui` views
 
@@ -172,17 +128,6 @@ The current views are:
 * Thermal view - similar to the MCE view, but it only displays a chart for MCE
   Thermal event records, also received from the patched `mcelog`.
 
-* Updates view - displays a [SWUPD](https://github.com/clearlinux/swupd-client)
-  update matrix, which lists the total number of successful SWUPD updates of
-  the Clear Linux OS from build versions listed in the first column to build
-  versions listed in the top row. The rightmost column and bottommost row list
-  the total of updates from or to each version, respectively. The update
-  statistics are received from the
-  [swupd-probe](https://github.com/clearlinux/swupd-probe), which monitors the
-  `/var/lib/swupd/telemetry` directory for files created by SWUPD that describe
-  certain software update events, or other events of interest (a user adds a
-  bundle, runs `swupd verify --fix`, etc).
-
 * Population view - contains column charts that display the number of unique
   systems that are running each version of an OS over a specific range of time.
   The "uniqueness" of a system is determined by its "machine ID" field, managed
@@ -196,25 +141,6 @@ To provided users with an extensible framework a concept of "plugin views" was
 implemented to add views without the need to make changes to the core of the
 application. To read more about [plugin view](/telemetryui/telemetryui/plugins/README.md)
 go to relevant documentation.
-
-
-## Special configuration
-
-### Configuring nginx for TLS
-
-The `sites_nginx.conf` config file is already enabled to accept TLS connections
-on port 443. However, you must install the X509 certificate chain and the
-certificate private key to a specific location before running `deploy.sh`. Both
-files should be in PEM format. Additional details on specific considerations
-can be found in the [nginx documentation](https://nginx.org/en/docs/http/configuring_https_servers.html).
-
-The certificate chain must be installed to `/etc/nginx/ssl/telemetry.cert.pem`
-and the private key installed to `/etc/nginx/ssl/telemetry.key.pem`.
-
-If the certificates are not preinstalled, the `deploy.sh` script will simply
-comment out TLS-related nginx configuration. Specifically, it will comment out
-the `listen 443 ssl`, `ssl_certificate`, `ssl_certificate_key`,
-`ssl_protocols`, and `ssl_ciphers` directives.
 
 ## Using the REST API
 
@@ -297,55 +223,17 @@ install of telemetrics-backend, the first migration will be applied, and any
 additional migrations in the `telemetryui/migrations/versions/` directory will
 be applied in sequence and upgrade the `telemetry` schema to the latest version.
 
-To create a new migration, you can follow the steps below:
+Any new migration from a new realease will be applied when the environment is
+started, this applies for both production and testing configurations.
 
-1. Deploy telemetrics-backend from a git topic branch (not production).
-2. On the system deployed to, run
-
-```
-sudo su
-cd /var/www/telemetry/
-```
-
-3. Modify `shared/model.py` as needed to make changes to the associated
-   database schema.
-4. When finished, create a migration with
-
-```
-cd telemetryui
-source ../venv/bin/activate
-export FLASK_APP=run.py
-flask db migrate
-```
-5. The last command above will report the name of the new (autogenerated)
-   migration file.  Modify it if additional migration steps are necessary
-   beyond what Flask-Migrate autogenerated for you. To apply the migration
-   to the database you need to execute the following command:
-```
-flask db upgrade
-```
-
-6. Copy the new file back to your git repository (into the
-   `telemetryui/migrations/versions` directory), push it to your topic branch,
-   and redeploy to test the new migration.
-
-## Using docker for development
-
-Update configuration ```/telemetryui/telemetryui/config_local.py``` database host
-and password (line 29) to:
-
-```
-SQLALCHEMY_DATABASE_URI = 'postgres://postgres:postgres@db/telemetry'
-```
-
-Once this change is done the environment can be launch, if the containers do not
-exist it has to be build first:
+## Development
 
 ```
 # Build
-docker-compose -f docker/docker-compose.yml build --force-rm
+sudo -E docker-compose build --force-rm
+
 # Launch
-docker-compose -f docker/docker-compose.yml up
+sudo -E docker-compose up
 ```
 
 ## Software License
