@@ -21,7 +21,6 @@ import importlib
 from flask import request
 from flask import jsonify
 from flask import redirect
-from .lib.exceptions import PlugablePayloadParserException
 from .lib.validation import (
     validate_header,
     validate_query,
@@ -29,9 +28,6 @@ from .lib.validation import (
     record_format_version_headers_validation,
     InvalidUsage)
 from .model import Record
-from .crash import (
-    process_guilties,
-    is_crash_classification)
 from .purge import *
 
 tm_version_regex = re.compile("^[0-9]+\.[0-9]+$")
@@ -42,11 +38,6 @@ ts_v3_regex = re.compile("^[0-9]+$")
 max_payload_len_inline = 30 * 1024	 # 30k
 max_payload_len = 300 * 1024		 # 300k
 MAX_INTERVAL_SEC = 24 * 60 * 60 * 30    # 30 days in seconds
-
-
-# This variable is loaded during app initialization from
-# values on config.POST_PROCESSING_PARSERS
-POST_PROCESSING_PARSERS = {}
 
 
 @app.errorhandler(InvalidUsage)
@@ -183,16 +174,6 @@ def collector_post_handler():
                            record_format_version, ts_capture, ts_reception, payload_format_version, os_name,
                            board_name, bios_version, cpu_model, event_id, external, payload)
 
-    # TODO: This should become a plugable parser
-    if is_crash_classification(classification):
-        # must pass args as bytes to uwsgi under Python 3
-        process_guilties(klass=classification.encode(), id=str(db_rec.id).encode())
-
-    if classification in POST_PROCESSING_PARSERS.keys():
-        POST_PROCESSING_PARSERS[classification](classification=classification.encode(),
-                                                record_id=str(db_rec.id).encode(),
-                                                payload=payload.encode())
-
     resp = jsonify(db_rec.to_dict())
     resp.status_code = 201
     return resp
@@ -305,32 +286,5 @@ def verify_parser_module(parser_module):
 
     if getattr(parser_module, 'parse_payload', None) is None:
         raise PlugablePayloadParserException('Parser {} should have a parse_payload method')
-
-
-def load_parser(parser_name):
-    global POST_PROCESSING_PARSERS
-
-    try:
-        parser_module = importlib.import_module("collector.parsers.{}.main".format(parser_name))
-        verify_parser_module(parser_module)
-        for parser_classification in parser_module.CLASSIFICATIONS:
-            if parser_classification in POST_PROCESSING_PARSERS.keys():
-                raise PlugablePayloadParserException("Parser plugin for class"
-                                                     " {} is already registered".format(parser_classification))
-            POST_PROCESSING_PARSERS[parser_classification] = parser_module.parse_payload
-            app.logger.info(" * Parser: {} registered for class: {}".format(parser_name, parser_classification))
-    except PlugablePayloadParserException as e:
-        print(e.str())
-    except ImportError as ie:
-        print(ie)
-
-
-def load_parsers():
-    pp_parsers = app.config.get('POST_PROCESSING_PARSERS', [])
-    for pp_parser in pp_parsers:
-        load_parser(pp_parser)
-
-
-load_parsers()
 
 # vi: ts=4 et sw=4 sts=4

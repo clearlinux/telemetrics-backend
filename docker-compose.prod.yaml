@@ -69,6 +69,18 @@ services:
     depends_on: ["db", "redis"]
     command: uwsgi --ini /var/www/webapp/webapp.ini
 
+  process:
+    image: telemetry/process:1.0
+    networks:
+      - backend
+    build:
+      context: .
+      dockerfile: ./services/processing/Dockerfile
+    env_file:
+      - ./services/production.env
+    depends_on: ["db", "migrate"]
+    command: /srv/processing/run.sh
+
   migrate:
     image: telemetry/webapp:1.0
     networks:

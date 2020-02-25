@@ -29,6 +29,9 @@ db = SQLAlchemy(app)
 
 class Guilty(db.Model):
     __tablename__ = 'guilty'
+    __table_args__ = (
+        db.UniqueConstraint('function', 'module', name='unique_guilty_constraint'),
+            )
     id = db.Column(db.Integer, primary_key=True)
     function = db.Column(db.String)
     module = db.Column(db.String)

@@ -1,0 +1,3 @@
+luigi
+psycopg2-binary
+cxxfilt
