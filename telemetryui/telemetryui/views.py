@@ -30,6 +30,7 @@ from flask import (
     redirect,
     flash,
     abort)
+from werkzeug import http as werkzeug_http
 from . import (
     app,
     crash,
@@ -48,7 +49,7 @@ REDIS_PORT = app.config.get('REDIS_PORT', 6379)
 REDIS_PASSWD = app.config.get('REDIS_PASSWD', None)
 
 @app.route('/telemetryui/', methods=['GET', 'POST'])
-@app.route('/telemetryui/records', methods=['GET', 'POST'])
+@app.route('/telemetryui/records', methods=['GET', 'POST', 'HEAD'])
 @app.route('/telemetryui/records/<int:page>', methods=['GET', 'POST'])
 def records(page=1):
     form = forms.RecordFilterForm()
@@ -167,6 +168,15 @@ def records(page=1):
                                             payload=payload, not_payload=not_payload, data_source=data_source,
                                             from_date=from_date, to_date=to_date).paginate(page, int(page_size), False)
         return render_template('records.html', records=out_records, form=form, os_map=json.dumps(os_map))
+
+    elif request.method == 'HEAD':
+        last_timestamp = Record.get_latest_timestamp_server()
+        etag = werkzeug_http.generate_etag(int(last_timestamp).to_bytes(4, byteorder='big'))
+        return Response(headers={'Etag': etag})
+
+    else:
+        return Response('Invalid request method', status_code=404)
+
 
 
 @app.route('/telemetryui/records/record_details/<int:record_id>')
