@@ -1,5 +1,5 @@
 #
-# Copyright 2015-2017 Intel Corporation
+# Copyright 2015-2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.sql.expression import cast
 from sqlalchemy.sql.expression import desc
 from sqlalchemy.sql.expression import case
+from sqlalchemy import text
 from time import time, localtime, strftime, mktime, strptime, gmtime
 from distutils.version import LooseVersion
 
@@ -543,6 +544,12 @@ class Record(db.Model):
 
         q = q.order_by(cast(Record.build, db.Integer))
         return q.all()
+
+    @staticmethod
+    def get_latest_timestamp_server():
+        sql = text("SELECT timestamp_server FROM records WHERE id = (SELECT MAX(id) FROM records)")
+        result = db.engine.execute(sql)
+        return result.first()[0]
 
 
 class GuiltyBlacklist(db.Model):
