@@ -45,7 +45,7 @@ def timesince(dt, default="just now"):
 
     for period, singular, plural in periods:
         if period:
-            return "{} {} ago".format(period, singular if period == 1 else plural)
+            return "{} {}".format(period, singular if period == 1 else plural)
 
     return default
 

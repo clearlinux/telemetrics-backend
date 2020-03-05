@@ -39,8 +39,8 @@
             if (pathname.search('\/plugins\/') > 0) {
                 leading_path = pathname.split('/').slice(0,4).join('/');
             }
-            jQuery("ul.nav.nav-tabs li").removeClass("active");
-            jQuery('ul.nav.nav-tabs li a[href^="' + leading_path + '"]').parent().addClass("active");
+            jQuery("ul.nav.nav-tabs li a").removeClass("active");
+            jQuery('ul.nav.nav-tabs li a[href^="' + leading_path + '"]').addClass("active");
         }
     }
 

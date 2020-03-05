@@ -14,7 +14,8 @@ services:
     volumes:
       - "telemetry-socket-volume:/var/run/uwsgi/"
     build:
-      context: ./services/nginx
+      context: .
+      dockerfile: ./services/nginx/Dockerfile
     ports:
       - 80:80
       - 443:443

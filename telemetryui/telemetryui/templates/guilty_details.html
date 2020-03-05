@@ -1,17 +1,6 @@
 {#-
- # Copyright 2015-2017 Intel Corporation
- #
- # Licensed under the Apache License, Version 2.0 (the "License");
- # you may not use this file except in compliance with the License.
- # You may obtain a copy of the License at
- #
- #     http://www.apache.org/licenses/LICENSE-2.0
- #
- # Unless required by applicable law or agreed to in writing, software
- # distributed under the License is distributed on an "AS IS" BASIS,
- # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- # See the License for the specific language governing permissions and
- # limitations under the License.
+ # Copyright (C) 2015-2020 Intel Corporation
+ # SPDX-License-Identifier: Apache-2.0
 -#}
 {% extends "base.html" %}
 
@@ -20,22 +9,33 @@
 {%- endblock %}
 
 {% block content %}
-<h3>Guilty details</h3>
-
-<dl class="dl-horizontal">
-    <dt>Guilty Id</dt>
-    <dd>{{ guilty_id }}</dd>
-    <dt>Function</dt>
-    <dd>{{ func }}</dd>
-    <dt>Module</dt>
-    <dd>{{ mod }}</dd>
-    <dt>Hidden?</dt>
-    <dd>{{ hide }}</dd>
+<h3></h3>
+<table class="table table-sm table-borderless">
+  <tbody>
+    <tr>
+      <th>Guilty Id</th>
+      <td>{{ guilty_id }}</td>
+    </tr>
+    <tr>
+      <th>Function</th>
+      <td>{{ func }}</td>
+    </tr>
+    <tr>
+      <th>Module</th>
+      <td>{{ mod }}</td>
+    </tr>
+    <tr>
+      <th>Hidden?</th>
+      <td>{{ hide }}</td>
+    </tr>
 {%- if query %}
-    <dt>Backtraces</dt>
-    <dd><a href="{{ url_for('guilty_backtraces', id=guilty_id) }}">view</a></dd>
+    <tr>
+      <th>Backtraces</th>
+      <td><a href="{{ url_for('guilty_backtraces', id=guilty_id) }}">view</a></td>
+    </tr>
 {% endif %}
-</dl>
+  </tbody>
+</table>
 
 {%- if query %}
 <h3>Machine ID mappings</h3>

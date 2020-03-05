@@ -1,56 +1,41 @@
 {#-
- # Copyright 2015-2017 Intel Corporation
- #
- # Licensed under the Apache License, Version 2.0 (the "License");
- # you may not use this file except in compliance with the License.
- # You may obtain a copy of the License at
- #
- #     http://www.apache.org/licenses/LICENSE-2.0
- #
- # Unless required by applicable law or agreed to in writing, software
- # distributed under the License is distributed on an "AS IS" BASIS,
- # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- # See the License for the specific language governing permissions and
- # limitations under the License.
+ # Copyright (C) 2015-2020 Intel Corporation
+ # SPDX-License-Identifier: Apache-2.0
 -#}
 <!DOCTYPE html>
 <html>
   <head>
   <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-    <link rel="stylesheet" href="/telemetryui/static/css/style.css">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.6.0/Chart.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
-    <script src="/telemetryui/static/js/telemetryui.js"></script>
+    <link rel="icon" href="data:;base64,=">
+    <link rel="stylesheet" href="/static/vendor/bootstrap/css/bootstrap.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/vendor/jquery/jquery.min.js"></script>
+    <script src="/static/vendor/chart.js/Chart.bundle.min.js"></script>
+    <script src="/static/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/telemetryui.js"></script>
     {%- block page_title %}
     <title>CLR Telemetry</title>
     {%- endblock %}
   </head>
   <body>
     <div class="container">
-  <ul class="nav nav-tabs" role="tablist">
-      <li class="nav-item active"><a class="nav-link" href="/telemetryui/records">Records</a></li>
-      <li class="nav-item"><a class="nav-link" href="/telemetryui/builds">Builds</a></li>
-      <li class="nav-item"><a class="nav-link" href="/telemetryui/stats">Stats</a></li>
-      <li class="nav-item"><a class="nav-link" href="/telemetryui/crashes">Crashes</a></li>
-      <li class="nav-item"><a class="nav-link" href="/telemetryui/mce">MCE</a></li>
-      <li class="nav-item"><a class="nav-link" href="/telemetryui/thermal">Thermal</a></li>
-      <li class="nav-item"><a class="nav-link" href="/telemetryui/population">Population</a></li>
-      {% for plugin in config['PLUGINS'] %}
-        <li class="nav-item"><a class="nav-link" href="/telemetryui/plugins/{{plugin}}">{{plugin|plugin_metadata}}</a></li>
-      {% endfor %}
-  </ul>
-
-    {% block content %} {% endblock %}
-        <script>
-            telemetryUI.initTabs();
-        </script>
+      <ul class="nav nav-tabs" role="tablist">
+          <li class="nav-item"><a class="nav-link active" href="/telemetryui/records">Records</a></li>
+          <li class="nav-item"><a class="nav-link" href="/telemetryui/builds">Builds</a></li>
+          <li class="nav-item"><a class="nav-link" href="/telemetryui/stats">Stats</a></li>
+          <li class="nav-item"><a class="nav-link" href="/telemetryui/crashes">Crashes</a></li>
+          <li class="nav-item"><a class="nav-link" href="/telemetryui/mce">MCE</a></li>
+          <li class="nav-item"><a class="nav-link" href="/telemetryui/thermal">Thermal</a></li>
+          <li class="nav-item"><a class="nav-link" href="/telemetryui/population">Population</a></li>
+      </ul>
+      {% block content %} {% endblock %}
+      <script>
+          telemetryUI.initTabs();
+      </script>
     </div>
   </body>
 </html>
-
 
 {#-
 # vi: ft=jinja ts=8 et sw=4 sts=4

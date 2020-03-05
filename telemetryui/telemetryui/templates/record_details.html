@@ -1,17 +1,6 @@
 {#-
- # Copyright 2015-2017 Intel Corporation
- #
- # Licensed under the Apache License, Version 2.0 (the "License");
- # you may not use this file except in compliance with the License.
- # You may obtain a copy of the License at
- #
- #     http://www.apache.org/licenses/LICENSE-2.0
- #
- # Unless required by applicable law or agreed to in writing, software
- # distributed under the License is distributed on an "AS IS" BASIS,
- # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- # See the License for the specific language governing permissions and
- # limitations under the License.
+ # Copyright (C) 2015-2020 Intel Corporation
+ # SPDX-License-Identifier: Apache-2.0
 -#}
 {% extends "base.html" %}
 
@@ -20,69 +9,91 @@
 {%- endblock %}
 
 {% block content %}
-<h3>Record : {{ record.id }}</h3>
-<dl class="dl-horizontal">
-    <dt>Record Id</dt>
-    <dd>{{ record.id }}</dd>
-    
-    <dt>Machine Id</dt>
-    <dd><a  href="{{ url_for('records', page=1, machine_id=record.machine_id) }}">{{  record.machine_id }}</a></dd>
-
-    <dt>Machine Type</dt>
-    <dd>{{ record.host_type }}</dd>
-
-    <dt>Operating System</dt>
-    <dd>{{ record.system_name }}</dd>
-
-    <dt>Kernel Version</dt>
-    <dd>{{ record.kernel_version }}</dd>
-
-    <dt>Architecture</dt>
-    <dd>{{ record.architecture }}</dd>
-
-    <dt>Board Name</dt>
-    <dd>{{ record.board_name if record.board_name else 'N/A'}}</dd>
-
-    <dt>BIOS Version</dt>
-    <dd>{{ record.bios_version if record.bios_version else 'N/A'}}</dd>
-
-    <dt>CPU Model</dt>
-    <dd>{{ record.cpu_model if record.cpu_model else 'N/A'}}</dd>
-
-    <dt>Record Time</dt>
-    <dd>{{ record.timestamp_client|local_datetime_since }}</dd>
-
-    <dt>Server Time</dt> 
-    <dd>{{ record.timestamp_server|local_datetime_since }} </dd>
-
-    <dt>Build</dt>
-    <dd><a href="{{ url_for('records', page=1, build=record.build) }}">{{ record.build }}</a></dd>
-
-    <dt>Severity</dt>
-    <dd><a href="{{ url_for('records', page=1, severity=record.severity) }}">{{ record.severity }}</a></dd>
-
-    <dt>Classification</dt>
-    <dd><a id="class_link" href="{{ url_for('records', page=1, classification=record.classification) }}">{{ record.classification }}</a></dd>
-
-    <dt>Guilty Id</dt>
-    <dd>
+<h3></h3>
+<table class="table table-sm table-borderless">
+  <tbody>
+  <tr class="col-sm-5">
+    <th>Record Id</th>
+    <td>{{ record.id }}</td>
+  </tr>
+  <tr class="col-sm-5">
+    <th>Machine Id</th>
+    <td><a  href="{{ url_for('records', page=1, machine_id=record.machine_id) }}">{{  record.machine_id }}</a></td>
+  </tr>
+  <tr class="col-sm-5">
+    <th>Machine Type</th>
+    <td>{{ record.host_type }}</td>
+  </tr>
+  <tr class="col-sm-5">
+    <th>Operating System</th>
+    <td>{{ record.system_name }}</td>
+  </tr>
+  <tr class="col-sm-5">
+    <th>Kernel Version</th>
+    <td>{{ record.kernel_version }}</td>
+  </tr>
+  <tr class="col-sm-5">
+    <th>Architecture</th>
+    <td>{{ record.architecture }}</td>
+  </tr>
+  <tr class="col-sm-5">
+    <th>Board Name</th>
+    <td>{{ record.board_name if record.board_name else 'N/A'}}</td>
+  </tr>
+  <tr class="col-sm-5">
+    <th>BIOS Version</th>
+    <td>{{ record.bios_version if record.bios_version else 'N/A'}}</td>
+  </tr>
+  <tr class="col-sm-5">
+    <th>CPU Model</th>
+    <td>{{ record.cpu_model if record.cpu_model else 'N/A'}}</td>
+  </tr>
+  <tr class="col-sm-5">
+    <th>Record Time</th>
+    <td>{{ record.timestamp_client|local_datetime_since }}</td>
+  </tr>
+  <tr class="col-sm-5">
+    <th>Server Time</th>
+    <td>{{ record.timestamp_server|local_datetime_since }} </td>
+  </tr>
+  <tr class="col-sm-5">
+    <th>Build</th>
+    <td><a href="{{ url_for('records', page=1, build=record.build) }}">{{ record.build }}</a></td>
+  </tr>
+  <tr class="col-sm-5">
+    <th>Severity</th>
+    <td><a href="{{ url_for('records', page=1, severity=record.severity) }}">{{ record.severity }}</a></td>
+  </tr>
+  <tr class="col-sm-5">
+    <th>Classification</th>
+    <td><a id="class_link" href="{{ url_for('records', page=1, classification=record.classification) }}">{{ record.classification }}</a></td>
+  </tr>
+  <tr class="col-sm-5">
+    <th>Guilty Id</th>
+    <td>
         {%- if record.guilty_id %}
         <a href="{{ url_for('guilty_details', id=record.guilty_id) }}">{{ record.guilty_id }}</a>
         {%- else %}
         N/A
         {%- endif %}
-    </dd>
+    </td>
+  </tr>
+  <tr class="col-sm-5">
+    <th>Payload Version</th>
+    <td>{{ record.payload_version }}</td>
+  </tr>
+  <tr class="col-sm-5">
+    <th>External</th>
+    <td>{{ record.external }}</td>
+  </tr>
+  <tr class="col-sm-5">
+    <th>Payload</th>
+    <td></td>
+  </tr>
+  </tbody>
+</table>
+<pre class="prettyprint">{{ record.payload }}</pre>
 
-    <dt>Payload Version</dt>
-    <dd>{{ record.payload_version }}</dd>
-
-    <dt>External</dt>
-    <dd>{{ record.external }}</dd>
-
-    <dt>Payload</dt>
-    <dd> <pre class="prettyprint">{{ record.payload }}</pre></dd>
-
-</dl>
 {% endblock %}
 
 

@@ -16,7 +16,7 @@
 {% extends "base.html" %}
 {% block content %}
     {% block form_content %}
-        <h2>Records</h2>
+        <h3></h3>
         <fieldset>
         <form role="form-inline" class="form-horizontal"  action="" method="post" name="filter-records">
             {{ form.hidden_tag() }}
@@ -69,8 +69,7 @@
             <div class="form-group row">
                 <div class="col-sm-12">
                     <button type="submit" name="filter" class="btn btn-primary">Submit</button>
-                    <button type="submit" name="csv_inline" class="btn btn-default">Export as CSV (inline)</button>
-                    <button type="submit" name="csv_attachment" class="btn btn-default">Export as CSV (attachment)</button>
+                    <button type="submit" name="csv_attachment" class="btn btn-outline-secondary">Download CSV (attachment)</button>
                 </div>
             </div>
         </form>
