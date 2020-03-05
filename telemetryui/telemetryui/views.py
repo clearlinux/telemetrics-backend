@@ -603,25 +603,6 @@ def is_plugin_valid(plugin):
     return True
 
 
-def load_plugin(plugin_name):
-    print("loading {}".format(plugin_name))
-    plugin_module = importlib.import_module("telemetryui.plugins.{}.views".format(plugin_name))
-
-    def register_bp(a_blueprint):
-        app.register_blueprint(a_blueprint, url_prefix='/telemetryui/plugins')
-
-    if is_plugin_valid(plugin_module) is True:
-        plugin_module.init(register_bp)
-    else:
-        print("Plugin {} could not be loaded".format(plugin_name))
-
-
-def load_plugins():
-    plugins = app.config.get('PLUGINS', [])
-    for plugin in plugins:
-        load_plugin(plugin)
-
-
 def get_cached_data(varname, expiration, funct, *args, **kwargs):
     try:
         redis_client = redis.StrictRedis(decode_responses=True,
@@ -651,7 +632,5 @@ def uncache_data(varname):
     except redis.exceptions.ConnectionError as e:
         print("%s Redis probably isn't running?" % str(e))
     return
-
-load_plugins()
 
 # vi: ts=4 et sw=4 sts=4

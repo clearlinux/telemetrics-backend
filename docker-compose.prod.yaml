@@ -21,7 +21,8 @@ services:
       - frontend
     restart: always
     build:
-      context: ./services/nginx
+      context: .
+      dockerfile: ./services/nginx/Dockerfile
     volumes:
       - "telemetry-socket-volume:/var/run/uwsgi/"
       - "telemetry-nginx-logs:/var/log/nginx"
