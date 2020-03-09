@@ -1,18 +1,5 @@
-#
-# Copyright 2015-2020 Intel Corporation
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
+# Copyright (C) 2015-2020 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
 
 import itertools
 from flask_sqlalchemy import SQLAlchemy
@@ -191,9 +178,11 @@ class Record(db.Model):
             raise
 
     @staticmethod
-    def query_records(build, classification, severity, machine_id, limit,
-                      interval_sec=None, ts_capture=None, from_id=None):
+    def query_records(build, classification, severity, machine_id,
+                      data_source=None, limit=None, payload=None,
+                      not_payload=None, from_id=None):
         records = Record.query
+
         if build is not None:
             records = records.filter_by(build=build)
         if classification is not None:
@@ -202,25 +191,24 @@ class Record(db.Model):
             records = records.filter(Record.severity == severity)
         if machine_id is not None:
             records = records.filter(Record.machine_id == machine_id)
+        if payload is not None:
+            records = records.filter(Record.payload.op('~')(payload))
+        if not_payload is not None:
+            records = records.filter(~Record.payload.op('~')(not_payload))
+        if data_source is not None:
+            if data_source == "external":
+                records = records.filter(Record.external == True)
+            elif data_source == "internal":
+                records = records.filter(Record.external == False)
         if from_id is not None:
-            records = records.filter(Record.id >= from_id)
-        if ts_capture is not None:
-            records = records.filter(Record.timestamp_client > ts_capture)
-
-        if interval_sec is not None:
-            current_time = time()
-            secs_in_past = current_time - interval_sec
-            # Due to time skew on client systems, delayed sends due to
-            # spooling, etc, timestamp_server works better as the reference
-            # timestamp.
-            records = records.filter(Record.timestamp_server > secs_in_past)
+            records = records.filter(Record.id < from_id)
 
         records = records.order_by(Record.id.desc())
 
         if limit is not None:
             records = records.limit(limit)
 
-        return records.all()
+        return records
 
     @staticmethod
     def get_record(record_id):
@@ -229,7 +217,7 @@ class Record(db.Model):
 
     @staticmethod
     def filter_records(build, classification, severity, machine_id=None, system_name=None, limit=None, from_date=None,
-                       to_date=None, payload=None, not_payload=None, data_source=None):
+                       to_date=None, payload=None, not_payload=None, data_source=None, lastid=None):
         records = Record.query
         if build is not None:
             records = records.filter_by(build=build)
@@ -259,6 +247,8 @@ class Record(db.Model):
                 records = records.filter(Record.external == True)
             elif data_source == "internal":
                 records = records.filter(Record.external == False)
+        if lastid is not None:
+            records = records.filter(Record.id > int(lastid))
 
         records = records.order_by(Record.id.desc())
 

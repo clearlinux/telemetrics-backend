@@ -1,100 +1,215 @@
 {#-
- # Copyright 2015-2017 Intel Corporation
- #
- # Licensed under the Apache License, Version 2.0 (the "License");
- # you may not use this file except in compliance with the License.
- # You may obtain a copy of the License at
- #
- #     http://www.apache.org/licenses/LICENSE-2.0
- #
- # Unless required by applicable law or agreed to in writing, software
- # distributed under the License is distributed on an "AS IS" BASIS,
- # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- # See the License for the specific language governing permissions and
- # limitations under the License.
+ # Copyright (C) 2015-2020 Intel Corporation
+ # SPDX-License-Identifier: Apache-2.0
 -#}
 {% extends "base.html" %}
 {% block content %}
-    {% block form_content %}
-        <h3></h3>
-        <fieldset>
-        <form role="form-inline" class="form-horizontal"  action="" method="post" name="filter-records">
-            {{ form.hidden_tag() }}
-            <div class="form-group row">
-                <div class="col-sm-3">
-                    {{ form.system_name.label(class="control-label", for="system_name") }}
-                    {{ form.system_name(id="system_name", class="form-control") }}
-                </div>
-                <div class="col-sm-3" >
-                    {{ form.build.label(class="control-label" , for="build_id") }}
-                    {{ form.build(id="build_id", class="form-control col-xs-2") }}
-                </div>
-                <div class="col-sm-3">
-                    {{ form.classification.label(class="control-label", for="classification_id") }}
-                    {{ form.classification(id="classification_id", class="form-control") }}
-                </div>
-                <div class="col-sm-3">
-                    {{ form.severity.label(class="control-label", for="severity_id") }}
-                    {{ form.severity(id="severity_id", class="form-control") }}
-                </div>
-            </div>
-            <div class="form-group row">
-                <div class="col-sm-3">
-                    {{ form.machine_id.label(class="control-label", for="machineid_id") }}
-                    {{ form.machine_id(id="machine_id", class="form-control") }}
-                </div>
-                <div class="col-sm-3">
-                    {{ form.payload.label(class="control-label", for="payload") }}
-                    {{ form.payload(id="payload", class="form-control") }}
-                </div>
-                <div class="col-sm-3">
-                    {{ form.not_payload.label(class="control-label", for="not_payload") }}
-                    {{ form.not_payload(id="not_payload", class="form-control") }}
-                </div>
-                <div class="col-sm-3">
-                    {{ form.data_source.label(class="control-label", for="data_source") }}
-                    {{ form.data_source(id="data_source", class="form-control") }}
-                </div>
-            </div>
-            <div class="form-group row">
-                <div class="col-sm-3">
-                    {{ form.from_date.label(class="control-label", for="from_date") }}
-                    {{ form.from_date(id="from_date", class="form-control") }}
-                </div>
-                <div class="col-sm-3">
-                    {{ form.to_date.label(class="control-label", for="to_date") }}
-                    {{ form.to_date(id="to_date", class="form-control") }}
-                </div>
-            </div>
-            <div class="form-group row">
-                <div class="col-sm-12">
-                    <button type="submit" name="filter" class="btn btn-primary">Submit</button>
-                    <button type="submit" name="csv_attachment" class="btn btn-outline-secondary">Download CSV (attachment)</button>
-                </div>
-            </div>
-        </form>
-        </fieldset>
+    <div class="row pl-4 pt-2 pb-2">
+        <div class="custom-control custom-switch col-sm">
+            <input type="checkbox" class="custom-control-input" id="streamSwitch">
+            <label class="custom-control-label" for="streamSwitch">Stream records</label>
+        </div>
+        <div class="col-sm">
+            <button type="button" class="btn btn-primary btn-sm float-right" data-toggle="modal" data-target="#filterModal">Filter</button>
+        </div>
+    </div>
 
-        <script>
-            var osMap = {{ os_map | safe }};
-            function selectBuilds(osName) {
-                $('select#build_id option').each(function () {
-                    $(this).show();
-                    if (osName != "All" && $(this).val() != "All" && !(osMap[osName].indexOf($(this).val()) + 1)){
-                        $(this).hide();
-                    }
-                });
-            }
-            $(document).on('change', 'select#system_name', function () {
-                $('select#build_id').val("All")
-                selectBuilds($(this).val());
-            });
-            selectBuilds($('select#system_name').val());
-        </script>
-    {% endblock %}
-    {% include "records_template.html" %}
+    <table class="table table-sm table-hover table-condensed text-nowrap telem-records">
+        <thead>
+            <th class="row-source">Source</th>
+            <th class="row-machine-id">Machine ID</th>
+            <th class="row-when">Age</th>
+            <th class="row-severity">Severity</th>
+            <th class="row-class ellipsize">Classification</th>
+            <th class="row-os">OS</th>
+            <th class="row-payload ellipsize">Payload</th>
+            <th class="row-button">More</th>
+        </thead>
+        <tbody id="records-table">
+        {% include "records_list.html" %}
+        </tbody>
+    </table>
+
+    <!-- Load button -->
+    <div class="text-center pt-3 pb-3">
+    <button id="loadMore" class="btn btn-primary" type="button">
+        <span class="spinner-grow spinner-grow-sm invisible" role="status" aria-hidden="true"></span>
+        Load more...
+    </button>
+    </div>
+
+    <!-- Error Alert -->
+    <div class="modal fade" id="errorModal" tabindex="-1" role="dialog" aria-labelledby="errorModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header alert-danger">
+                    <h4 class="modal-title">Error</h4>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div id="warning-text" class="modal-body"></div>
+                <div class="modal-footer">
+                       <button type="button" class="btn btn-light" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+     </div>
+
+    <!-- Record Details -->
+    <div class="modal fade" id="recordModal" tabindex="-1" role="dialog" aria-labelledby="recordModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title">Record Details</h4>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div id="recordDetails" class="modal-body"></div>
+                <div class="modal-footer">
+                       <button type="button" class="btn btn-light" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+     </div>
+
+    <!-- Filter Modal -->
+    <div class="modal fade" id="filterModal" tabindex="-1" role="dialog" aria-labelledby="filterModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title" id="filterModalLabel">Record Payload</h4>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+
+                <form role="form-inline" class="form-horizontal"  action="" method="post" name="filter-records">
+                   {{ form.hidden_tag() }}
+                   <div class="modal-body">
+                   <div class="form-group row">
+                       <div class="col-sm">
+                       {{ form.data_source.label(class="control-label", for="data_source") }}
+                       {{ form.data_source(id="data_source", class="form-control") }}
+                       </div>
+                       <div class="col-sm">
+                       {{ form.machine_id.label(class="control-label", for="machineid_id") }}
+                       {{ form.machine_id(id="machine_id", class="form-control") }}
+                       </div>
+                   </div>
+                   <div class="form-group row">
+                       <div class="col-sm">
+                       {{ form.classification.label(class="control-label", for="classification_id") }}
+                       {{ form.classification(id="classification_id", class="form-control") }}
+                       </div>
+                       <div class="col-sm">
+                       {{ form.severity.label(class="control-label", for="severity_id") }}
+                       {{ form.severity(id="severity_id", class="form-control") }}
+                       </div>
+                   </div>
+                   <div class="form-group row">
+                       <div class="col-sm">
+                       {{ form.payload.label(class="control-label", for="payload") }}
+                       {{ form.payload(id="payload", class="form-control") }}
+                       </div>
+                       <div class="col-sm">
+                       {{ form.not_payload.label(class="control-label", for="not_payload") }}
+                       {{ form.not_payload(id="not_payload", class="form-control") }}
+                       </div>
+                   </div>
+                   </div>
+                   <div class="modal-footer">
+                       <button type="submit" name="filter" class="btn btn-primary">Submit</button>
+                       <button type="button" class="btn btn-light" data-dismiss="modal">Close</button>
+                   </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+<script>
+
+    var timerId = null;
+    var pauseReload = false;
+
+    function getSearch() {
+          return document.location.search;
+    }
+
+    /* Load more button event handler */
+    jQuery("#loadMore").on("click", function(event) {
+          var lastId = jQuery("#records-table tr:last button").data("recordid");
+          jQuery("button#loadMore span").removeClass("invisible");
+          jQuery("button#loadMore").prop("disabled", true);
+          jQuery.ajax({ type: "GET",
+                        url: "/telemetryui/records/lastid/" + lastId + getSearch(),
+                        async: true,
+                        success : function(result) {
+                             jQuery("#records-table").append(result);
+                             jQuery("button#loadMore").prop("disabled", false);
+                        },
+                        error: function(xhr, status, error) {
+                             jQuery("#warning-text").text(error);
+                             jQuery("#errorModal").modal();
+                             setTimeout( function () {
+                                    jQuery("button#loadMore").prop("disabled", false);
+                                }, 5000);
+                        },
+                        complete: function(result) {
+                             jQuery("button#loadMore span").addClass("invisible");
+                        }
+          });
+    });
+
+    /* Record details */
+    jQuery("#recordModal").on("show.bs.modal", function(event) {
+          var button = jQuery(event.relatedTarget);
+          var recordId = button.data("recordid");
+          jQuery("#recordDetails")
+                 .load("/telemetryui/records/record_details/" + recordId, function( response, status, xhr ) {
+                        if (status == "error") {
+                              jQuery("#warning-text").text(response);
+                              jQuery("#errorModal").modal();
+                        }
+                 });
+    });
+
+    /* Filter modal */
+    jQuery("#filterModal").on("show.bs.modal", function(event) {
+          pauseReload = true;
+    });
+
+    jQuery("#filterModal").on("hide.bs.modal", function(event) {
+          pauseReload = false;
+    });
+
+    /* Error modal */
+    jQuery("#errorModal").on("show.bs.modal", function(event) {
+          pauseReload = true;
+    });
+
+    jQuery("#errorModal").on("hide.bs.modal", function(event) {
+          pauseReload = false;
+    });
+
+    /* Streaming switch event handler */
+    jQuery("#streamSwitch").change(function () {
+          if (this.checked) {
+               // Add filter logic
+               timerId = setInterval( function() {
+                         if (pauseReload == false) {
+                                 jQuery("#records-table")
+                                        .load("/telemetryui/records/lastid/0" + getSearch(), function( response, status, xhr ) {
+                                               if (status == "error") {
+                                                     jQuery("#warning-text").text(response);
+                                                     jQuery("#errorModal").modal();
+                                               }
+                                        });
+                         }}, 5000);
+               jQuery("#loadMore").prop("disabled", true);
+          } else {
+               clearInterval(timerId);
+               jQuery("#loadMore").prop("disabled", false);
+          }
+    });
+
+</script>
 {% endblock %}
-
 
 {#-
 # vi: ft=jinja ts=8 et sw=4 sts=4
