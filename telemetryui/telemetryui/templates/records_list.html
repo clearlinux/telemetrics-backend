@@ -1,0 +1,22 @@
+{#-
+ # Copyright (C) 2015-2020 Intel Corporation
+ # SPDX-License-Identifier: Apache-2.0
+-#}
+{% for rec in records %}
+<tr>
+    {%- if rec.external %}
+    <td class="bg-success">external</td>
+    {%- else %}
+    <td>internal</td>
+    {%- endif %}
+    <td><span data-toggle="tooltip" data-placement="top" title="{{ rec.machine_id }}"><div class="machine_id">{{ rec.machine_id }}</div></span></td>
+    <td>{{ rec.timestamp_server | int | timesince }}</td>
+    <td><span class="badge badge-{{ (rec.severity | get_severity_label).0 }}">{{ (rec.severity | get_severity_label).1 }}</span></td>
+    <td class="ellipsize">{{ rec.classification|replace("org.clearlinux/", "") }}</td>
+    <td>{{ rec.system_name }}</td>
+    <td class="ellipsize row-payload">{{ rec.payload }}</td>
+    <td>
+	<button type="button" class="btn btn-link btn-sm float-right" data-toggle="modal" data-target="#recordModal" data-recordid="{{ rec.id }}">...</button>
+    </td>
+</tr>
+{% endfor %}

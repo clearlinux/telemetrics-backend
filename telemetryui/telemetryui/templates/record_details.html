@@ -2,11 +2,6 @@
  # Copyright (C) 2015-2020 Intel Corporation
  # SPDX-License-Identifier: Apache-2.0
 -#}
-{% extends "base.html" %}
-
-{%- block page_title %}
-<title>Record Details ({{ record.id }}) - CLR Telemetry</title>
-{%- endblock %}
 
 {% block content %}
 <h3></h3>
@@ -86,16 +81,11 @@
     <th>External</th>
     <td>{{ record.external }}</td>
   </tr>
-  <tr class="col-sm-5">
-    <th>Payload</th>
-    <td></td>
-  </tr>
   </tbody>
 </table>
 <pre class="prettyprint">{{ record.payload }}</pre>
 
 {% endblock %}
-
 
 {#-
 # vi: ft=jinja ts=8 et sw=4 sts=4

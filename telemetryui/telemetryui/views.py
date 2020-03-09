@@ -1,18 +1,5 @@
-#
-# Copyright 2015-2017 Intel Corporation
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
+# Copyright (C) 2015-2020 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
 
 import ast
 import re
@@ -42,22 +29,101 @@ from .model import (
 from flask import Response
 import redis
 
-RECORDS_PER_PAGE = app.config.get('RECORDS_PER_PAGE', 50)
+
+RECORDS_PER_PAGE = app.config.get('RECORDS_PER_PAGE', 25)
 MAX_RECORDS_PER_PAGE = app.config.get('MAX_RECORDS_PER_PAGE', 1000)
 REDIS_HOSTNAME = app.config.get('REDIS_HOSTNAME', 'localhost')
 REDIS_PORT = app.config.get('REDIS_PORT', 6379)
 REDIS_PASSWD = app.config.get('REDIS_PASSWD', None)
 
+
+def records_get(form, request, lastid=None):
+    classification = request.args.get('classification')
+    build = request.args.get('build')
+    severity = request.args.get('severity')
+    machine_id = request.args.get('machine_id')
+    payload = request.args.get('payload')
+    not_payload = request.args.get('not_payload')
+    data_source = request.args.get('data_source')
+
+    if classification is not None:
+        form.classification.default = classification
+    if build is not None:
+        form.build.default = build
+    if severity is not None:
+        form.severity.default = severity
+    if machine_id is not None:
+        form.machine_id.default = machine_id
+    if payload is not None:
+        form.payload.default = payload
+    if not_payload is not None:
+        form.not_payload.default = not_payload
+    if data_source is not None:
+        form.data_source.default = data_source
+
+    form.process()
+    return Record.query_records(build, classification, severity, machine_id,
+                                payload=payload, not_payload=not_payload,
+                                data_source=data_source, from_id=lastid,
+                                limit=RECORDS_PER_PAGE)
+
+
+def records_post(form, request):
+
+    if form.validate_on_submit() is False:
+        out_records = Record.query.order_by(Record.id.desc()).limit(RECORDS_PER_PAGE).all()
+        return render_template('records.html', records=out_records, form=form)
+    else:
+        classification = request.form.get('classification')
+        system_name = request.form.get('system_name')
+        build = request.form.get('build')
+        severity = request.form.get('severity')
+        machine_id = request.form.get('machine_id')
+        payload = request.form.get('payload')
+        not_payload = request.form.get('not_payload')
+        from_date = request.form.get('from_date')
+        to_date = request.form.get('to_date')
+        data_source = request.form.get('data_source')
+
+        redirect_args = {
+            "system_name": system_name if system_name != "All" else None,
+            "build": build if build != "All" else None,
+            "severity": severity if severity != "All" else None,
+            "classification": classification if classification != "All" else None,
+            "machine_id": machine_id if machine_id != "" else None,
+            "payload": payload if payload != "" else None,
+            "not_payload": not_payload if not_payload != "" else None,
+            "from_date": from_date if from_date != "" else None,
+            "to_date": to_date if to_date != "" else None,
+            "data_source": data_source if data_source != "All" else None,
+        }
+        dest = 'records'
+
+        if 'csv_attachment' in request.form:
+            redirect_args['format_type'] = 'attach'
+            redirect_args['timestamp'] = time.time()
+            dest = 'export_csv'
+
+        url = url_for(dest, **redirect_args)
+        return redirect(url)
+
+
+@app.route('/telemetryui/records/lastid/<int:lastid>', methods=['GET'])
+def record_page(lastid):
+    form = forms.RecordFilterForm()
+    if lastid == 0:
+        lastid = None
+    out_records = records_get(form, request, lastid=lastid)
+    return render_template('records_list.html', records=out_records)
+
+
 @app.route('/telemetryui/', methods=['GET', 'POST'])
 @app.route('/telemetryui/records', methods=['GET', 'POST', 'HEAD'])
-@app.route('/telemetryui/records/<int:page>', methods=['GET', 'POST'])
-def records(page=1):
+def records():
     form = forms.RecordFilterForm()
-
     class_strings = get_cached_data("class_strings", 600, Record.get_classifications, with_regex=True)
     builds = get_cached_data("builds", 600, Record.get_builds)
     os_map = get_cached_data("os_map", 600, Record.get_os_map)
-
     form.classification.choices = [(cs, cs) if "*" not in cs else (cs.replace("*", "%"), cs) for cs in class_strings]
     form.classification.choices.insert(0, ("All", "All"))
     form.build.choices = [(b[0], b[0]) for b in builds]
@@ -73,110 +139,16 @@ def records(page=1):
     form.data_source.choices = [("All", "All")] + [('external', 'External'), ('internal', 'Internal')]
 
     if request.method == 'POST':
-        if form.validate_on_submit() is False:
-            print("Was not able to validate fields")
-            for error in form.build.errors:
-                print(error)
-            for error in form.classification.errors:
-                print(error)
-            for error in form.severity.errors:
-                print(error)
-            out_records = Record.query.order_by(Record.id.desc()).paginate(page, RECORDS_PER_PAGE, False)
-            return render_template('records.html', records=out_records, form=form)
-        else:
-            classification = request.form.get('classification')
-            system_name = request.form.get('system_name')
-            build = request.form.get('build')
-            severity = request.form.get('severity')
-            page_size = request.form.get('page_size')
-            machine_id = request.form.get('machine_id')
-            payload = request.form.get('payload')
-            not_payload = request.form.get('not_payload')
-            from_date = request.form.get('from_date')
-            to_date = request.form.get('to_date')
-            data_source = request.form.get('data_source')
-
-            redirect_args = {
-                "page_size": page_size if page_size != "" else None,
-                "system_name": system_name if system_name != "All" else None,
-                "build": build if build != "All" else None,
-                "severity": severity if severity != "All" else None,
-                "classification": classification if classification != "All" else None,
-                "machine_id": machine_id if machine_id != "" else None,
-                "payload": payload if payload != "" else None,
-                "not_payload": not_payload if not_payload != "" else None,
-                "from_date": from_date if from_date != "" else None,
-                "to_date": to_date if to_date != "" else None,
-                "data_source": data_source if data_source != "All" else None,
-            }
-            dest = 'records'
-
-            if 'csv_inline' in request.form:
-                redirect_args['format_type'] = 'inline'
-                redirect_args['timestamp'] = time.time()
-                dest = 'export_csv'
-            elif 'csv_attachment' in request.form:
-                redirect_args['format_type'] = 'attach'
-                redirect_args['timestamp'] = time.time()
-                dest = 'export_csv'
-
-            redirect_args['page'] = 1
-            url = url_for(dest, **redirect_args)
-            return redirect(url)
-
+        return records_post(form, request)
     elif request.method == 'GET':
-        classification = request.args.get('classification')
-        system_name = request.args.get('system_name')
-        build = request.args.get('build')
-        severity = request.args.get('severity')
-        page_size = request.args.get('page_size')
-        machine_id = request.args.get('machine_id')
-        payload = request.args.get('payload')
-        not_payload = request.args.get('not_payload')
-        from_date = request.args.get('from_date')
-        to_date = request.args.get('to_date')
-        data_source = request.args.get('data_source')
-
-        if classification is not None:
-            form.classification.default = classification
-        if build is not None:
-            form.build.default = build
-        if system_name is not None:
-            form.system_name.default = system_name
-        if severity is not None:
-            form.severity.default = severity
-        if machine_id is not None:
-            form.machine_id.default = machine_id
-        if payload is not None:
-            form.payload.default = payload
-        if not_payload is not None:
-            form.not_payload.default = not_payload
-        if from_date is not None:
-            form.from_date.default = datetime.datetime.strptime(from_date, "%Y-%m-%d")
-        if to_date is not None:
-            form.to_date.default = datetime.datetime.strptime(to_date, "%Y-%m-%d")
-        if data_source is not None:
-            form.data_source.default = data_source
-
-        form.process()
-
-        if page_size is None:
-            page_size = RECORDS_PER_PAGE
-        elif int(page_size) > MAX_RECORDS_PER_PAGE:
-            page_size = MAX_RECORDS_PER_PAGE
-        out_records = Record.filter_records(build, classification, severity, machine_id, system_name=system_name,
-                                            payload=payload, not_payload=not_payload, data_source=data_source,
-                                            from_date=from_date, to_date=to_date).paginate(page, int(page_size), False)
+        out_records = records_get(form, request)
         return render_template('records.html', records=out_records, form=form, os_map=json.dumps(os_map))
-
     elif request.method == 'HEAD':
         last_timestamp = Record.get_latest_timestamp_server()
         etag = werkzeug_http.generate_etag(int(last_timestamp).to_bytes(4, byteorder='big'))
         return Response(headers={'Etag': etag})
-
     else:
         return Response('Invalid request method', status_code=404)
-
 
 
 @app.route('/telemetryui/records/record_details/<int:record_id>')

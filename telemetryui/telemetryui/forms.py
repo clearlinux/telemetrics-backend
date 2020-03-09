@@ -33,8 +33,8 @@ from wtforms.widgets import (
 
 
 class RecordFilterForm(FlaskForm):
-    system_name = SelectField('OS Name',  coerce=str, validators=[InputRequired()])
-    build = SelectField('Version', coerce=str, validators=[InputRequired()])
+    system_name = SelectField('OS Name',  coerce=str, validators=[Optional()])
+    build = SelectField('Version', coerce=str, validators=[Optional()])
     classification = SelectField('Classification', coerce=str,  validators=[InputRequired()])
     severity = SelectField('Severity',  coerce=str, validators=[InputRequired()])
     machine_id = TextField('Machine ID')
