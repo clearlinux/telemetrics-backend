@@ -6,13 +6,9 @@ import re
 import time
 import json
 import datetime
-import importlib
 from flask import (
     render_template,
     request,
-    session,
-    Blueprint)
-from flask import (
     url_for,
     redirect,
     flash,
@@ -21,6 +17,7 @@ from werkzeug import http as werkzeug_http
 from . import (
     app,
     crash,
+    utils,
     forms)
 from .model import (
     Record,
@@ -30,90 +27,19 @@ from flask import Response
 import redis
 
 
-RECORDS_PER_PAGE = app.config.get('RECORDS_PER_PAGE', 25)
-MAX_RECORDS_PER_PAGE = app.config.get('MAX_RECORDS_PER_PAGE', 1000)
 REDIS_HOSTNAME = app.config.get('REDIS_HOSTNAME', 'localhost')
 REDIS_PORT = app.config.get('REDIS_PORT', 6379)
 REDIS_PASSWD = app.config.get('REDIS_PASSWD', None)
 
-
-def records_get(form, request, lastid=None):
-    classification = request.args.get('classification')
-    build = request.args.get('build')
-    severity = request.args.get('severity')
-    machine_id = request.args.get('machine_id')
-    payload = request.args.get('payload')
-    not_payload = request.args.get('not_payload')
-    data_source = request.args.get('data_source')
-
-    if classification is not None:
-        form.classification.default = classification
-    if build is not None:
-        form.build.default = build
-    if severity is not None:
-        form.severity.default = severity
-    if machine_id is not None:
-        form.machine_id.default = machine_id
-    if payload is not None:
-        form.payload.default = payload
-    if not_payload is not None:
-        form.not_payload.default = not_payload
-    if data_source is not None:
-        form.data_source.default = data_source
-
-    form.process()
-    return Record.query_records(build, classification, severity, machine_id,
-                                payload=payload, not_payload=not_payload,
-                                data_source=data_source, from_id=lastid,
-                                limit=RECORDS_PER_PAGE)
-
-
-def records_post(form, request):
-
-    if form.validate_on_submit() is False:
-        out_records = Record.query.order_by(Record.id.desc()).limit(RECORDS_PER_PAGE).all()
-        return render_template('records.html', records=out_records, form=form)
-    else:
-        classification = request.form.get('classification')
-        system_name = request.form.get('system_name')
-        build = request.form.get('build')
-        severity = request.form.get('severity')
-        machine_id = request.form.get('machine_id')
-        payload = request.form.get('payload')
-        not_payload = request.form.get('not_payload')
-        from_date = request.form.get('from_date')
-        to_date = request.form.get('to_date')
-        data_source = request.form.get('data_source')
-
-        redirect_args = {
-            "system_name": system_name if system_name != "All" else None,
-            "build": build if build != "All" else None,
-            "severity": severity if severity != "All" else None,
-            "classification": classification if classification != "All" else None,
-            "machine_id": machine_id if machine_id != "" else None,
-            "payload": payload if payload != "" else None,
-            "not_payload": not_payload if not_payload != "" else None,
-            "from_date": from_date if from_date != "" else None,
-            "to_date": to_date if to_date != "" else None,
-            "data_source": data_source if data_source != "All" else None,
-        }
-        dest = 'records'
-
-        if 'csv_attachment' in request.form:
-            redirect_args['format_type'] = 'attach'
-            redirect_args['timestamp'] = time.time()
-            dest = 'export_csv'
-
-        url = url_for(dest, **redirect_args)
-        return redirect(url)
+GUILTY_CACHE_KEY = "tmp_top_crash_guilties"
 
 
 @app.route('/telemetryui/records/lastid/<int:lastid>', methods=['GET'])
-def record_page(lastid):
+def records_page(lastid):
     form = forms.RecordFilterForm()
     if lastid == 0:
         lastid = None
-    out_records = records_get(form, request, lastid=lastid)
+    out_records = utils.records_get(form, request, lastid=lastid)
     return render_template('records_list.html', records=out_records)
 
 
@@ -121,27 +47,26 @@ def record_page(lastid):
 @app.route('/telemetryui/records', methods=['GET', 'POST', 'HEAD'])
 def records():
     form = forms.RecordFilterForm()
+
+    # Cached data
     class_strings = get_cached_data("class_strings", 600, Record.get_classifications, with_regex=True)
     builds = get_cached_data("builds", 600, Record.get_builds)
     os_map = get_cached_data("os_map", 600, Record.get_os_map)
+
+    # Form setup
     form.classification.choices = [(cs, cs) if "*" not in cs else (cs.replace("*", "%"), cs) for cs in class_strings]
     form.classification.choices.insert(0, ("All", "All"))
     form.build.choices = [(b[0], b[0]) for b in builds]
     form.build.choices.insert(0, ("All", "All"))
-
     form.severity.choices = [("All", "All"), ("1", "1 - low"), ("2", "2 - med"), ("3", "3 - high"), ("4", "4 - crit")]
-    cl = session.get('severity')
-
     form.system_name.choices = [("All", "All")] + [(n, n) for n in os_map.keys()]
-
     form.machine_id.default = ""
-
     form.data_source.choices = [("All", "All")] + [('external', 'External'), ('internal', 'Internal')]
 
     if request.method == 'POST':
-        return records_post(form, request)
+        return utils.records_post(form, request)
     elif request.method == 'GET':
-        out_records = records_get(form, request)
+        out_records = utils.records_get(form, request)
         return render_template('records.html', records=out_records, form=form, os_map=json.dumps(os_map))
     elif request.method == 'HEAD':
         last_timestamp = Record.get_latest_timestamp_server()
@@ -177,12 +102,19 @@ def stats():
     return render_template('stats.html', charts=charts)
 
 
+@app.route('/telemetryui/crashes/offset/<int:offset>', methods=['GET'])
+def crashes_page(offset=0):
+    backtrace_classes = crash.get_backtrace_classes()
+    tmp = get_cached_data(GUILTY_CACHE_KEY, 600, Record.get_top_crash_guilties, classes=backtrace_classes)
+    out_builds, guilties = crash.guilty_list_per_build(tmp)
+    more_guilties = [guilties[0] for x in range(0, 10)]
+    return render_template('crashes_list.html', guilties=more_guilties, builds=out_builds, page_offset=offset*10)
+
+
 @app.route('/telemetryui/crashes', methods=['GET', 'POST'])
-@app.route('/telemetryui/crashes/page/<int:page>', methods=['GET'])
 @app.route('/telemetryui/crashes/<string:filter>', methods=['GET', 'POST'])
-def crashes(filter=None, page=1):
+def crashes(filter=None):
     form = forms.GuiltyDetailsForm()
-    guilties_key = "tmp_top_crash_guilties"
     if request.method == 'POST':
         if form.validate_on_submit() is False:
             for e in form.comment.errors:
@@ -217,19 +149,22 @@ def crashes(filter=None, page=1):
                 endpoint = url_for('crashes')
 
             # Delete cached query when user updates a guilty with comment or hidden
-            uncache_data(guilties_key)
+            uncache_data(GUILTY_CACHE_KEY)
             return redirect(endpoint)
 
-    all_classes = crash.get_all_classes()
     backtrace_classes = crash.get_backtrace_classes()
-    tmp = get_cached_data(guilties_key, 600, Record.get_top_crash_guilties, classes=backtrace_classes)
+    tmp = get_cached_data(GUILTY_CACHE_KEY, 600, Record.get_top_crash_guilties,
+                          classes=backtrace_classes)
 
     if filter:
         guilties = crash.guilty_list_for_build(tmp, filter)
-        return render_template('crashes_filter.html', guilties=guilties, build=filter, form=form, pages=0, page=0)
+        return render_template('crashes_filter.html', guilties=guilties,
+                               build=filter, form=form)
     else:
-        pages, out_builds, guilties = crash.guilty_list_per_build(tmp, page=page)
-        return render_template('crashes.html', guilties=guilties, builds=out_builds, form=form, pages=pages, page=page)
+        out_builds, guilties = crash.guilty_list_per_build(tmp)
+        more_guilties = [guilties[0] for x in range(0, 10)]
+        return render_template('crashes.html', guilties=more_guilties,
+                               builds=out_builds, form=form, page_offset=0)
 
 
 @app.route('/telemetryui/crashes/guilty_details/<int:id>')
@@ -256,7 +191,7 @@ def guilty_backtraces(id):
     funcmod = re.escape("{} - [{}]".format(func, mod))
     backtrace_classes = crash.get_backtrace_classes()
     # TODO: should consolidate backtraces
-    backtraces = crash.explode_backtraces(classes=backtrace_classes, guilty_id=id, machine_id=machine_id, build=build)
+    backtraces = utils.explode_backtraces(classes=backtrace_classes, guilty_id=id, machine_id=machine_id, build=build)
     # Display at most 50 entries for now, until we have backtrace grouping and pagination
     return render_template('guilty_backtraces.html', backtraces=backtraces[:50], func=func, mod=mod, funcmod=funcmod, guiltyid=id)
 
@@ -486,7 +421,6 @@ def mce():
 def thermal():
     current_year = time.strftime("%Y", time.gmtime(time.time()))
     current_week = time.strftime("%U", time.gmtime(time.time()))
-    current_last_week = time.strftime("%U", time.strptime(current_year + "1231", "%Y%m%d"))
     from_date = time.strftime("%Y-%m-%d", time.localtime(time.mktime(time.strptime(current_year + current_week + "0", "%Y%U%w")) - 2419200))  # 2419200 = (604800 * 4)
     records = Record.filter_records(None, ["org.clearlinux/mce/thermal"], None, from_date=from_date).all()
     week_rec_map = {}
@@ -560,19 +494,6 @@ def export_csv(timestamp):
         response = Response(dump_contents(), mimetype='text/csv')
         response.headers['Content-Disposition'] = 'attachment; filename=export-{}.csv'.format(timestamp)
         return response
-
-
-def is_plugin_valid(plugin):
-    tab_name = getattr(plugin, "TAB_NAME", None)
-    init = getattr(plugin, "init", None)
-
-    if None in [tab_name, init]:
-        return False
-
-    if callable(init) is not True:
-        return False
-
-    return True
 
 
 def get_cached_data(varname, expiration, funct, *args, **kwargs):
