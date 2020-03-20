@@ -20,7 +20,6 @@ class Config(object):
     WTF_CSRF_ENABLED = True
     SECRET_KEY = secrets.token_hex(32)
     RECORDS_PER_PAGE = 50
-    MAX_RECORDS_PER_PAGE = 1000
     REDIS_HOSTNAME = redis_hostname
     REDIS_PORT = 6379
     REDIS_PASSWD = redis_passwd

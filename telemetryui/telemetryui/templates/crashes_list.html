@@ -1,0 +1,50 @@
+{#-
+ # Copyright (C) 2015-2020 Intel Corporation
+ # SPDX-License-Identifier: Apache-2.0
+-#}
+
+{%- set maxtotal = guilties[0].total %}
+{%- for g in guilties %}
+<tr>
+<th scope="row">{{ loop.index + ((page - 1) * CRASH_PAGE_SIZE) }}</th>
+<td>
+<a href="/telemetryui/crashes/guilty_details/{{ g.guilty_id }}" data-toggle="tooltip" data-placement="left" title="{{ g.guilty }}">{{ g.guilty|truncate(30, True) }}</a>
+<button id="more_button" type="button" data-toggle="modal" data-target="#myModal" data-whatever="{{ g.comment }}" data-gid="{{ g.guilty_id }}" style="width: 34px;">...</button>
+</td>
+<!-- SVG for {{ g.total }}/{{ maxtotal }} overall -->
+<td>
+<span data-toggle="tooltip" data-placement="left" title="{{ g.total }}">
+{%- set width = g.total / maxtotal * 100 %}
+<svg width="4.5em" height="1.5em" viewBox="0 0 3 1">
+<rect x="0" y="0" width="{{ width }}%" height="100%" />
+</svg>
+</span>
+</td>
+{%- for c in g.builds %}
+{%- for b in builds %}
+{%- if b[0] == c[0] and c[1] != "0" %}
+<!-- SVG for {{ c[1] }}/{{ b[1] }} in build {{ b[0] }} -->
+<td>
+<span data-toggle="tooltip" data-placement="left" title="{{ c[1] }}">
+{%- set width = c[1] / b[1] * 100 %}
+<svg width="4.5em" height="1.5em" viewBox="0 0 3 1">
+<rect x="0" y="0" width="{{ width }}%" height="100%" />
+</svg>
+</span>
+</td>
+{%- elif b[0] == c[0] %}
+<td><!-- no data --></td>
+{%- endif %}
+{%- endfor %}
+{%- endfor %}
+<td>
+<div class="comment_container">
+<div class="comment" style="display:inline;">{% if g.comment %}<span title="{{ g.comment }}">{{ g.comment|truncate(30, True) }}</span>{% endif %}</div>
+</div>
+</td>
+</tr>
+{%- endfor %}
+
+{#-
+# vi: ft=jinja ts=8 et sw=4 sts=4
+#}

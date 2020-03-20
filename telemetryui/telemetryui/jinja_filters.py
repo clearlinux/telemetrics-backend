@@ -58,10 +58,6 @@ def basename(path):
     return os.path.basename(path)
 
 
-def plugin_metadata(name):
-    return name.title()
-
-
 def get_severity_label(severity):
     return {
         2: ("info", "med",),
