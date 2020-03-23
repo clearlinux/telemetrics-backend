@@ -2,125 +2,126 @@
  # Copyright (C) 2015-2020 Intel Corporation
  # SPDX-License-Identifier: Apache-2.0
 -#}
+
 {% extends "base.html" %}
 {% block content %}
-    <div class="row pl-4 pt-2 pb-2">
-        <div class="custom-control custom-switch col-sm">
-            <input type="checkbox" class="custom-control-input" id="streamSwitch">
-            <label class="custom-control-label" for="streamSwitch">Stream records</label>
-        </div>
-        <div class="col-sm">
-            <button type="button" class="btn btn-primary btn-sm float-right" data-toggle="modal" data-target="#filterModal">Filter</button>
-        </div>
+<div class="row pl-4 pt-2 pb-2">
+    <div class="custom-control custom-switch col-sm">
+        <input type="checkbox" class="custom-control-input" id="streamSwitch">
+        <label class="custom-control-label" for="streamSwitch">Stream records</label>
     </div>
+    <div class="col-sm">
+        <button type="button" class="btn btn-primary btn-sm float-right" data-toggle="modal" data-target="#filterModal">Filter</button>
+    </div>
+</div>
 
-    <table class="table table-sm table-hover table-condensed text-nowrap telem-records">
-        <thead>
-            <th class="row-source">Source</th>
-            <th class="row-machine-id">Machine ID</th>
-            <th class="row-when">Age</th>
-            <th class="row-severity">Severity</th>
-            <th class="row-class ellipsize">Classification</th>
-            <th class="row-os">OS</th>
-            <th class="row-payload ellipsize">Payload</th>
-            <th class="row-button">More</th>
-        </thead>
-        <tbody id="records-table">
+<table class="table table-sm table-hover table-condensed text-nowrap telem-records">
+    <thead>
+        <th class="row-source">Source</th>
+        <th class="row-machine-id">Machine ID</th>
+        <th class="row-when">Age</th>
+        <th class="row-severity">Severity</th>
+        <th class="row-class ellipsize">Classification</th>
+        <th class="row-os">OS</th>
+        <th class="row-payload ellipsize">Payload</th>
+        <th class="row-button">More</th>
+    </thead>
+    <tbody id="records-table">
         {% include "records_list.html" %}
-        </tbody>
-    </table>
+    </tbody>
+</table>
 
-    <!-- Load button -->
-    <div class="text-center pt-3 pb-3">
-    <button id="loadMore" class="btn btn-primary" type="button">
-        <span class="spinner-grow spinner-grow-sm invisible" role="status" aria-hidden="true"></span>
+<!-- Load button -->
+<div class="text-center pt-3 pb-3">
+<button id="loadMore" class="btn btn-primary" type="button">
+    <span class="spinner-grow spinner-grow-sm invisible" role="status" aria-hidden="true"></span>
         Load more...
-    </button>
+</button>
+</div>
+
+<!-- Error Alert -->
+<div class="modal fade" id="errorModal" tabindex="-1" role="dialog" aria-labelledby="errorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header alert-danger">
+                <h4 class="modal-title">Error</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div id="warning-text" class="modal-body"></div>
+            <div class="modal-footer">
+                   <button type="button" class="btn btn-light" data-dismiss="modal">Close</button>
+            </div>
+        </div>
     </div>
+ </div>
 
-    <!-- Error Alert -->
-    <div class="modal fade" id="errorModal" tabindex="-1" role="dialog" aria-labelledby="errorModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header alert-danger">
-                    <h4 class="modal-title">Error</h4>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                </div>
-                <div id="warning-text" class="modal-body"></div>
-                <div class="modal-footer">
-                       <button type="button" class="btn btn-light" data-dismiss="modal">Close</button>
-                </div>
+<!-- Record Details -->
+<div class="modal fade" id="recordModal" tabindex="-1" role="dialog" aria-labelledby="recordModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Record Details</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div id="recordDetails" class="modal-body"></div>
+            <div class="modal-footer">
+                   <button type="button" class="btn btn-light" data-dismiss="modal">Close</button>
             </div>
         </div>
-     </div>
+    </div>
+ </div>
 
-    <!-- Record Details -->
-    <div class="modal fade" id="recordModal" tabindex="-1" role="dialog" aria-labelledby="recordModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4 class="modal-title">Record Details</h4>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                </div>
-                <div id="recordDetails" class="modal-body"></div>
-                <div class="modal-footer">
-                       <button type="button" class="btn btn-light" data-dismiss="modal">Close</button>
-                </div>
+<!-- Filter Modal -->
+<div class="modal fade" id="filterModal" tabindex="-1" role="dialog" aria-labelledby="filterModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="filterModalLabel">Record Payload</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
             </div>
-        </div>
-     </div>
 
-    <!-- Filter Modal -->
-    <div class="modal fade" id="filterModal" tabindex="-1" role="dialog" aria-labelledby="filterModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4 class="modal-title" id="filterModalLabel">Record Payload</h4>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                </div>
-
-                <form role="form-inline" class="form-horizontal"  action="" method="post" name="filter-records">
+            <form role="form-inline" class="form-horizontal"  action="" method="post" name="filter-records">
                    {{ form.hidden_tag() }}
-                   <div class="modal-body">
-                   <div class="form-group row">
-                       <div class="col-sm">
+               <div class="modal-body">
+               <div class="form-group row">
+                   <div class="col-sm">
                        {{ form.data_source.label(class="control-label", for="data_source") }}
                        {{ form.data_source(id="data_source", class="form-control") }}
-                       </div>
-                       <div class="col-sm">
+                   </div>
+                   <div class="col-sm">
                        {{ form.machine_id.label(class="control-label", for="machineid_id") }}
                        {{ form.machine_id(id="machine_id", class="form-control") }}
-                       </div>
                    </div>
-                   <div class="form-group row">
-                       <div class="col-sm">
+               </div>
+               <div class="form-group row">
+                   <div class="col-sm">
                        {{ form.classification.label(class="control-label", for="classification_id") }}
                        {{ form.classification(id="classification_id", class="form-control") }}
-                       </div>
-                       <div class="col-sm">
+                   </div>
+                   <div class="col-sm">
                        {{ form.severity.label(class="control-label", for="severity_id") }}
                        {{ form.severity(id="severity_id", class="form-control") }}
-                       </div>
                    </div>
-                   <div class="form-group row">
-                       <div class="col-sm">
+               </div>
+               <div class="form-group row">
+                   <div class="col-sm">
                        {{ form.payload.label(class="control-label", for="payload") }}
                        {{ form.payload(id="payload", class="form-control") }}
-                       </div>
-                       <div class="col-sm">
+                   </div>
+                   <div class="col-sm">
                        {{ form.not_payload.label(class="control-label", for="not_payload") }}
                        {{ form.not_payload(id="not_payload", class="form-control") }}
-                       </div>
                    </div>
-                   </div>
-                   <div class="modal-footer">
-                       <button type="submit" name="filter" class="btn btn-primary">Submit</button>
-                       <button type="button" class="btn btn-light" data-dismiss="modal">Close</button>
-                   </div>
-                </form>
-            </div>
+               </div>
+               </div>
+               <div class="modal-footer">
+                   <button type="submit" name="filter" class="btn btn-primary">Submit</button>
+                   <button type="button" class="btn btn-light" data-dismiss="modal">Close</button>
+               </div>
+            </form>
         </div>
     </div>
+</div>
 
 <script>
 

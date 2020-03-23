@@ -6,7 +6,7 @@
 {%- set maxtotal = guilties[0].total %}
 {%- for g in guilties %}
 <tr>
-<th scope="row">{{ loop.index + ((page - 1) * CRASH_PAGE_SIZE) }}</th>
+<th scope="row">{{ loop.index + page_offset }}</th>
 <td>
 <a href="/telemetryui/crashes/guilty_details/{{ g.guilty_id }}" data-toggle="tooltip" data-placement="left" title="{{ g.guilty }}">{{ g.guilty|truncate(30, True) }}</a>
 <button id="more_button" type="button" data-toggle="modal" data-target="#myModal" data-whatever="{{ g.comment }}" data-gid="{{ g.guilty_id }}" style="width: 34px;">...</button>

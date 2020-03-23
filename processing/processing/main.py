@@ -40,6 +40,7 @@ UPDATE_GUILTY = """
    UPDATE records SET guilty_id = %s WHERE id = %s
 """
 
+
 class GuilyBlacklist(object):
 
     def __init__(self, blacklisted):
@@ -91,6 +92,9 @@ def process_crashes(cur, crashes, schema="public", debug=False):
             gid = row[0]
             ### Update record table with guilty_id
             cur.execute(UPDATE_GUILTY, (gid, rid,))
+        else:
+            print("# function or module is None for record id {}".format(rid))
+
     ### Update latest processed record table with record_id
     cur.execute(UPDATE_PROCESSED_RECORD, (rid,))
     print("#### Updating last processed id to {}\n".format(rid))

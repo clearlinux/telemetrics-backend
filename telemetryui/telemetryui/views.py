@@ -1,7 +1,6 @@
 # Copyright (C) 2015-2020 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 
-import ast
 import re
 import time
 import json
@@ -24,12 +23,10 @@ from .model import (
     Guilty,
     GuiltyBlacklist)
 from flask import Response
-import redis
+from .cache import (
+    get_cached_data,
+    uncache_data)
 
-
-REDIS_HOSTNAME = app.config.get('REDIS_HOSTNAME', 'localhost')
-REDIS_PORT = app.config.get('REDIS_PORT', 6379)
-REDIS_PASSWD = app.config.get('REDIS_PASSWD', None)
 
 GUILTY_CACHE_KEY = "tmp_top_crash_guilties"
 
@@ -106,9 +103,10 @@ def stats():
 def crashes_page(offset=0):
     backtrace_classes = crash.get_backtrace_classes()
     tmp = get_cached_data(GUILTY_CACHE_KEY, 600, Record.get_top_crash_guilties, classes=backtrace_classes)
+    # Load multiple crashes and test this
+    # we should be able to load crashes after the first ten
     out_builds, guilties = crash.guilty_list_per_build(tmp)
-    more_guilties = [guilties[0] for x in range(0, 10)]
-    return render_template('crashes_list.html', guilties=more_guilties, builds=out_builds, page_offset=offset*10)
+    return render_template('crashes_list.html', guilties=guilties, builds=out_builds, page_offset=offset*10)
 
 
 @app.route('/telemetryui/crashes', methods=['GET', 'POST'])
@@ -162,8 +160,7 @@ def crashes(filter=None):
                                build=filter, form=form)
     else:
         out_builds, guilties = crash.guilty_list_per_build(tmp)
-        more_guilties = [guilties[0] for x in range(0, 10)]
-        return render_template('crashes.html', guilties=more_guilties,
+        return render_template('crashes.html', guilties=guilties,
                                builds=out_builds, form=form, page_offset=0)
 
 
@@ -495,35 +492,5 @@ def export_csv(timestamp):
         response.headers['Content-Disposition'] = 'attachment; filename=export-{}.csv'.format(timestamp)
         return response
 
-
-def get_cached_data(varname, expiration, funct, *args, **kwargs):
-    try:
-        redis_client = redis.StrictRedis(decode_responses=True,
-                                         host=REDIS_HOSTNAME,
-                                         port=REDIS_PORT,
-                                         password=REDIS_PASSWD,);
-        # Try to get data from redis first
-        ret = redis_client.get(varname)
-        if ret is not None:
-            # Convert to original type if successful
-            ret = ast.literal_eval(ret)
-        else:
-            # If nothing was found, query the database
-            ret = funct(*args, **kwargs)
-            # Convert to string representation and cache via redis
-            redis_client.set(varname, repr(ret), ex=expiration)
-    except redis.exceptions.ConnectionError as e:
-        print("%s Redis probably isn't running?" % str(e))
-        # If we can't connect to redis, just query directly
-        ret = funct(*args, **kwargs)
-    return ret
-
-def uncache_data(varname):
-    try:
-        redis_client = redis.StrictRedis(decode_responses=True);
-        redis_client.delete(varname)
-    except redis.exceptions.ConnectionError as e:
-        print("%s Redis probably isn't running?" % str(e))
-    return
 
 # vi: ts=4 et sw=4 sts=4

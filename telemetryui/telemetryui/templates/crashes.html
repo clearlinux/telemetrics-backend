@@ -1,18 +1,8 @@
 {#-
- # Copyright 2015-2017 Intel Corporation
- #
- # Licensed under the Apache License, Version 2.0 (the "License");
- # you may not use this file except in compliance with the License.
- # You may obtain a copy of the License at
- #
- #     http://www.apache.org/licenses/LICENSE-2.0
- #
- # Unless required by applicable law or agreed to in writing, software
- # distributed under the License is distributed on an "AS IS" BASIS,
- # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- # See the License for the specific language governing permissions and
- # limitations under the License.
+ # Copyright (C) 2015-2020 Intel Corporation
+ # SPDX-License-Identifier: Apache-2.0
 -#}
+
 {% extends "base.html" %}
 
 {%- block page_title %}
@@ -23,8 +13,6 @@
 
     <h1>Crash stats</h1>
     <h2>Top Crashes</h2>
-
-    {% set CRASH_PAGE_SIZE = 10 %}
 
     {%- with messages = get_flashed_messages(with_categories=true) %}
     {%- if messages %}
@@ -37,7 +25,7 @@
     <div class="row">
 
     {%- if guilties %}
-    <table class="table table-bordered table-striped table-condensed">
+    <table class="table table-sm table-striped table-hover table-condensed text-nowrap">
         <caption>Top crashes in the last 7 days, with frequency per build</caption>
         <thead>
             <th>#</th>
@@ -49,67 +37,18 @@
             {%- endfor %}
             <th>Comment</th>
         </thead>
-        <tbody>
-            {%- set maxtotal = guilties[0].total %}
-            {%- for g in guilties %}
-            <tr>
-            <th scope="row">{{ loop.index + ((page - 1) * CRASH_PAGE_SIZE) }}</th>
-            <td>
-                <a href="/telemetryui/crashes/guilty_details/{{ g.guilty_id }}" data-toggle="tooltip" data-placement="left" title="{{ g.guilty }}">{{ g.guilty|truncate(30, True) }}</a>
-                <button id="more_button" type="button" data-toggle="modal" data-target="#myModal" data-whatever="{{ g.comment }}" data-gid="{{ g.guilty_id }}" style="width: 34px;">...</button>
-            </td>
-            <!-- SVG for {{ g.total }}/{{ maxtotal }} overall -->
-            <td>
-                <span data-toggle="tooltip" data-placement="left" title="{{ g.total }}">
-                {%- set width = g.total / maxtotal * 100 %}
-                <svg width="4.5em" height="1.5em" viewBox="0 0 3 1">
-                    <rect x="0" y="0" width="{{ width }}%" height="100%" />
-                </svg>
-                </span>
-            </td>
-            {%- for c in g.builds %}
-            {%- for b in builds %}
-            {%- if b[0] == c[0] and c[1] != "0" %}
-            <!-- SVG for {{ c[1] }}/{{ b[1] }} in build {{ b[0] }} -->
-            <td>
-                <span data-toggle="tooltip" data-placement="left" title="{{ c[1] }}">
-                {%- set width = c[1] / b[1] * 100 %}
-                <svg width="4.5em" height="1.5em" viewBox="0 0 3 1">
-                    <rect x="0" y="0" width="{{ width }}%" height="100%" />
-                </svg>
-                </span>
-            </td>
-            {%- elif b[0] == c[0] %}
-            <td><!-- no data --></td>
-            {%- endif %}
-            {%- endfor %}
-            {%- endfor %}
-            <td>
-                <div class="comment_container">
-                    <div class="comment" style="display:inline;">{% if g.comment %}<span title="{{ g.comment }}">{{ g.comment|truncate(30, True) }}</span>{% endif %}</div>
-                </div>
-            </td>
-            </tr>
-            {%- endfor %}
+        <tbody id="crashes-table">
+        {% include "crashes_list.html" %}
         </tbody>
     </table>
 
-    <!-- Crash list pagination -->
-    {%- if pages != 0 %}
-    <nav aria-label="Crash pages">
-        <ul class="pagination">
-        {%- for page_number in range(0, pages + 1) %}
-            {%- if page_number == page - 1 %}
-            <li class="page-item active">
-            {%- else %}
-            <li class="page-item">
-            {%- endif %}
-                <a class="page-link" href="/telemetryui/crashes/page/{{ page_number + 1 }}">{{ page_number + 1 }}</a>
-            </li>
-        {%- endfor %}
-        </ul>
-    </nav>
-    {%- endif %}
+    <!-- Load button -->
+    <div class="text-center pt-3 pb-3">
+    <button id="loadMore" class="btn btn-primary" type="button">
+        <span class="spinner-grow spinner-grow-sm invisible" role="status" aria-hidden="true"></span>
+        Load more...
+    </button>
+    </div>
 
     {%- else %} {# guilties #}
     <div class="alert alert-info" role="alert">No guilties data to display.</div>
@@ -157,7 +96,7 @@
     </div>
 
 <script>
-    $('#myModal').on('show.bs.modal', function(event) {
+    jQuery('#myModal').on('show.bs.modal', function(event) {
         var button = $(event.relatedTarget);
         var comment = button.data('whatever');
         var gid = button.data('gid');
@@ -171,13 +110,38 @@
         modal.find('#guilty_id').val(gid);
     });
 
-    $(function() {
+    jQuery(function() {
         $('[data-toggle="tooltip"]').tooltip()
     });
+
+    /* Initial page load has offset = 0 */
+    var lastOffset = 1;
+
+    jQuery("#loadMore").on("click", function(event) {
+        jQuery.ajax({ type: "GET",
+                        url: "/telemetryui/crashes/offset/" + lastOffset,
+                        async: true,
+                        success : function(result) {
+                             lastOffset++;
+                             jQuery("#crashes-table").append(result);
+                             jQuery("button#loadMore").prop("disabled", false);
+                        },
+                        error: function(xhr, status, error) {
+                             jQuery("#warning-text").text(error);
+                             jQuery("#errorModal").modal();
+                             setTimeout( function () {
+                                    jQuery("button#loadMore").prop("disabled", false);
+                                }, 5000);
+                        },
+                        complete: function(result) {
+                             jQuery("button#loadMore span").addClass("invisible");
+                        }
+          });
+    });
+
 </script>
 
 {% endblock %}
-
 
 {#-
 # vi: ft=jinja ts=8 et sw=4 sts=4
