@@ -1,10 +1,10 @@
-""" Crash processing logic """
 # Copyright (C) 2015-2020 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 
 from collections import namedtuple
 import re
 import cxxfilt
+from operator import itemgetter
 
 # Groups for the FRAME_PATTERN below
 # 1 - frame number + one space
@@ -249,5 +249,103 @@ def parse_backtrace(backtrace):
     # Populate a namedtuple for convenience
     record_id = backtrace[1]
     return crash(record_id, program, pid, signal, frames)
+
+
+def guilty_list_for_build(guilties, filter='overall'):
+    newlist = []
+
+    for g in guilties:
+        found_entry = False
+        guilty_str = g[0] + ' - [' + g[1] + ']'
+        build, count, guilty_id, comment = (g[2], g[3], g[4], g[5])
+        for i, n in enumerate(newlist):
+            if guilty_str == n['guilty'] and filter in ['overall', build]:
+                newlist[i]['total'] += count
+                found_entry = True
+                break
+
+        if found_entry:
+            continue
+
+        if filter in ['overall', build]:
+            entry = {}
+            entry['guilty'] = guilty_str
+            entry['total'] = count
+            entry['guilty_id'] = guilty_id
+            entry['comment'] = comment
+            newlist.append(entry)
+
+    newlist = sorted(newlist, key=itemgetter('total'), reverse=True)
+
+    return newlist
+
+
+def guilty_list_per_build(guilties):
+    # TODO: should compute max values per build with a subquery instead
+    build_maxcount = {}
+
+    buildset = set()
+    buildlist = []
+    newlist = []
+
+    for g in guilties:
+        found_entry = False
+        guilty_str = g[0] + ' - [' + g[1] + ']'
+        build, count, guilty_id, comment = (g[2], g[3], g[4], g[5])
+        for i, n in enumerate(newlist):
+            if guilty_str == n['guilty']:
+                newlist[i]['total'] += count
+                newlist[i]['builds'].append((build, count))
+                if build in build_maxcount:
+                    build_maxcount[build] = max(build_maxcount[build], count)
+                else:
+                    build_maxcount[build] = count
+                found_entry = True
+                break
+
+        if found_entry:
+            continue
+
+        entry = {}
+        entry['guilty'] = guilty_str
+        entry['total'] = count
+        entry['guilty_id'] = guilty_id
+        entry['comment'] = comment
+        entry['builds'] = []
+        entry['builds'].append((build, count))
+        if build in build_maxcount:
+            build_maxcount[build] = max(build_maxcount[build], count)
+        else:
+            build_maxcount[build] = count
+        newlist.append(entry)
+    # We only care about the top 10 guilties
+    newlist = sorted(newlist, key=itemgetter('total'), reverse=True)
+    for guilty in newlist:
+        for build in guilty['builds']:
+            buildset.add(build[0])
+
+    buildlist = list(buildset)
+    buildlist = sorted(buildlist, key=lambda b: int(b[0]), reverse=True)
+
+    # For crashes not occuring in a particular build, provide a "0" value for
+    # the count. This simplifies table generation in the jinja template.
+    for i, g in enumerate(newlist):
+        builds, _ = list(zip(*g['builds']))
+        counter = 0
+        for b in buildlist:
+            if b not in builds:
+                newlist[i]['builds'].insert(counter, (b, "0"))
+            counter += 1
+
+    for i, b in enumerate(buildlist):
+        buildlist[i] = (b, build_maxcount[b])
+
+    buildlist = sorted(buildlist, key=lambda b: int(b[0]), reverse=True)
+
+    for i, b in enumerate(newlist):
+        newlist[i]['builds'] = sorted(newlist[i]['builds'], key=lambda b: int(b[0]), reverse=True)
+
+    return buildlist, newlist
+
 
 # vi: ts=4 et sw=4 sts=4

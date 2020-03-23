@@ -14,6 +14,7 @@ from processing.main import (
 
 from processing import crash
 
+
 class GlobalParams(luigi.Config):
 
     db_name = os.environ['POSTGRES_DB']

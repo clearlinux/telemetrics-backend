@@ -8,6 +8,7 @@ RUN swupd bundle-add python3-basic
 RUN mkdir -p /srv/processing
 COPY ./processing .
 COPY ./services/processing/. .
+COPY ./utils/shared_utils/crash.py ./processing/crash.py
 RUN pip3 install -r requirements.txt
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 RUN chown -R appuser:appuser /srv/processing
