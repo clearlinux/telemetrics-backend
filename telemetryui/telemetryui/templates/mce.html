@@ -73,7 +73,7 @@
             <tr>
             <th scope="row">{{ loop.index }}</th>
             <td>
-                <a href="/telemetryui/records/1?machine_id={{ row.machine_id }}&classification=org.clearlinux%2Fmce%2F%25">{{ row.machine_id }}</a>
+                <a href="/records/1?machine_id={{ row.machine_id }}&classification=org.clearlinux%2Fmce%2F%25">{{ row.machine_id }}</a>
             </td>
             {%- for b in builds %}
             {%- if row.builds[b] %}
@@ -129,7 +129,7 @@ $(document).on('change', '#top-mce', function () {
 });
 
 </script>
-<script src="/telemetryui/static/js/mce.js"></script>
+<script src="/static/js/mce.js"></script>
 <script>
     (function(){
 

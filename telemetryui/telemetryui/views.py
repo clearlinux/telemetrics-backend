@@ -31,7 +31,7 @@ from .cache import (
 GUILTY_CACHE_KEY = "tmp_top_crash_guilties"
 
 
-@app.route('/telemetryui/records/lastid/<int:lastid>', methods=['GET'])
+@app.route('/records/lastid/<int:lastid>', methods=['GET'])
 def records_page(lastid):
     form = forms.RecordFilterForm()
     if lastid == 0:
@@ -40,8 +40,8 @@ def records_page(lastid):
     return render_template('records_list.html', records=out_records)
 
 
-@app.route('/telemetryui/', methods=['GET', 'POST'])
-@app.route('/telemetryui/records', methods=['GET', 'POST', 'HEAD'])
+@app.route('/', methods=['GET', 'POST'])
+@app.route('/records', methods=['GET', 'POST', 'HEAD'])
 def records():
     form = forms.RecordFilterForm()
 
@@ -73,7 +73,7 @@ def records():
         return Response('Invalid request method', status_code=404)
 
 
-@app.route('/telemetryui/records/record_details/<int:record_id>')
+@app.route('/records/record_details/<int:record_id>')
 def record_details(record_id):
     record = Record.get_record(record_id)
     if not record:
@@ -81,13 +81,13 @@ def record_details(record_id):
     return render_template('record_details.html', record=record)
 
 
-@app.route('/telemetryui/builds')
+@app.route('/builds')
 def builds():
     build_rec_pairs = get_cached_data("build_rec_pairs", 600, Record.get_recordcnts_by_build)
     return render_template('builds.html', build_stats=build_rec_pairs)
 
 
-@app.route('/telemetryui/stats')
+@app.route('/stats')
 def stats():
     # Display records per classification and records per machine type for now
     class_rec_pairs = get_cached_data("class_rec_pairs", 600, Record.get_recordcnts_by_classification)
@@ -99,7 +99,7 @@ def stats():
     return render_template('stats.html', charts=charts)
 
 
-@app.route('/telemetryui/crashes/offset/<int:offset>', methods=['GET'])
+@app.route('/crashes/offset/<int:offset>', methods=['GET'])
 def crashes_page(offset=0):
     backtrace_classes = crash.get_backtrace_classes()
     tmp = get_cached_data(GUILTY_CACHE_KEY, 600, Record.get_top_crash_guilties, classes=backtrace_classes)
@@ -109,8 +109,8 @@ def crashes_page(offset=0):
     return render_template('crashes_list.html', guilties=guilties, builds=out_builds, page_offset=offset*10)
 
 
-@app.route('/telemetryui/crashes', methods=['GET', 'POST'])
-@app.route('/telemetryui/crashes/<string:filter>', methods=['GET', 'POST'])
+@app.route('/crashes', methods=['GET', 'POST'])
+@app.route('/crashes/<string:filter>', methods=['GET', 'POST'])
 def crashes(filter=None):
     form = forms.GuiltyDetailsForm()
     if request.method == 'POST':
@@ -164,7 +164,7 @@ def crashes(filter=None):
                                builds=out_builds, form=form, page_offset=0)
 
 
-@app.route('/telemetryui/crashes/guilty_details/<int:id>')
+@app.route('/crashes/guilty_details/<int:id>')
 def guilty_details(id):
     function = Guilty.get_function(id)
     if not function:
@@ -175,7 +175,7 @@ def guilty_details(id):
     return render_template('guilty_details.html', guilty_id=id, query=query, func=function, mod=module, hide=hidden)
 
 
-@app.route('/telemetryui/crashes/guilty_details/<int:id>/backtraces')
+@app.route('/crashes/guilty_details/<int:id>/backtraces')
 def guilty_backtraces(id):
     machine_id = request.args.get('machine_id')
     build = request.args.get('build')
@@ -193,7 +193,7 @@ def guilty_backtraces(id):
     return render_template('guilty_backtraces.html', backtraces=backtraces[:50], func=func, mod=mod, funcmod=funcmod, guiltyid=id)
 
 
-@app.route('/telemetryui/crashes/guilty_edit/', methods=['GET', 'POST'])
+@app.route('/crashes/guilty_edit/', methods=['GET', 'POST'])
 def guilty_edit():
     guilty_id = request.args.get('guilty_id')
     rec_id = request.args.get('record_id')
@@ -268,7 +268,7 @@ def guilty_edit():
         return render_template('guilty_edit_one.html', crash_info=result, record_id=rec_id, filters=filters, form=form, funcmod=funcmod)
 
 
-@app.route('/telemetryui/crashes/guilty_edit/add', methods=['GET', 'POST'])
+@app.route('/crashes/guilty_edit/add', methods=['GET', 'POST'])
 def guilty_add():
     form_add = forms.GuiltyAddForm()
     funcmods = crash.get_all_funcmods()
@@ -295,7 +295,7 @@ def guilty_add():
     return render_template('guilty_add.html', form=form_add, filters=filters)
 
 
-@app.route('/telemetryui/crashes/guilty_edit/remove', methods=['GET', 'POST'])
+@app.route('/crashes/guilty_edit/remove', methods=['GET', 'POST'])
 def guilty_remove():
     form_remove = forms.GuiltyRemoveForm()
     guilties = GuiltyBlacklist.get_guilties()
@@ -318,7 +318,7 @@ def guilty_remove():
     return render_template('guilty_remove.html', form=form_remove, count=count)
 
 
-@app.route('/telemetryui/crashes/guilty_edit/hidden', methods=['GET', 'POST'])
+@app.route('/crashes/guilty_edit/hidden', methods=['GET', 'POST'])
 def guilty_hidden():
     form_hidden = forms.GuiltyHiddenForm()
     guilties = Guilty.get_hidden_guilties()
@@ -340,7 +340,7 @@ def guilty_hidden():
     return render_template('guilty_hidden.html', form=form_hidden, count=count)
 
 
-@app.route('/telemetryui/crashes/guilty_edit/reset', methods=['GET', 'POST'])
+@app.route('/crashes/guilty_edit/reset', methods=['GET', 'POST'])
 def guilty_reset():
     form_reset = forms.GuiltyResetForm()
     if request.method == 'POST':
@@ -364,7 +364,7 @@ def guilty_reset():
     return render_template('guilty_reset.html', form=form_reset)
 
 
-@app.route('/telemetryui/mce', methods=['GET', 'POST'])
+@app.route('/mce', methods=['GET', 'POST'])
 def mce():
     mce_classes = [
         "org.clearlinux/mce/corrected",
@@ -414,7 +414,7 @@ def mce():
     return render_template('mce.html', charts=charts, top10=top10, builds=sorted(by_builds.keys()), maxcnt=maxcnt, fullmce=week_rec_map)
 
 
-@app.route('/telemetryui/thermal', methods=['GET', 'POST'])
+@app.route('/thermal', methods=['GET', 'POST'])
 def thermal():
     current_year = time.strftime("%Y", time.gmtime(time.time()))
     current_week = time.strftime("%U", time.gmtime(time.time()))
@@ -439,13 +439,13 @@ def thermal():
     return render_template('thermal.html', thermal_chart=thermal_chart)
 
 
-@app.route('/telemetryui/updates')
+@app.route('/updates')
 def updates():
     updates = get_cached_data("updates_data", 600, Record.get_updates)
     return json.dumps(updates)
 
 
-@app.route('/telemetryui/population')
+@app.route('/population')
 def population():
     charts = [{'id': 'Overall', 'time': None, 'timestr': 'Overall'},
               {'id': 'TwoWeeks', 'time': 14, 'timestr': 'Past Two Weeks'},
@@ -460,7 +460,7 @@ def population():
     return render_template('population.html', charts=charts)
 
 
-@app.route('/telemetryui/records/export/records-<int:timestamp>.csv')
+@app.route('/records/export/records-<int:timestamp>.csv')
 def export_csv(timestamp):
     severity = request.args.get('severity')
     classification = request.args.get('classification')

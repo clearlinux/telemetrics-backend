@@ -119,7 +119,7 @@
 
     jQuery("#loadMore").on("click", function(event) {
         jQuery.ajax({ type: "GET",
-                        url: "/telemetryui/crashes/offset/" + lastOffset,
+                        url: "/crashes/offset/" + lastOffset,
                         async: true,
                         success : function(result) {
                              lastOffset++;
