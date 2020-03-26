@@ -138,7 +138,7 @@
           jQuery("button#loadMore span").removeClass("invisible");
           jQuery("button#loadMore").prop("disabled", true);
           jQuery.ajax({ type: "GET",
-                        url: "/telemetryui/records/lastid/" + lastId + getSearch(),
+                        url: "/records/lastid/" + lastId + getSearch(),
                         async: true,
                         success : function(result) {
                              jQuery("#records-table").append(result);
@@ -162,7 +162,7 @@
           var button = jQuery(event.relatedTarget);
           var recordId = button.data("recordid");
           jQuery("#recordDetails")
-                 .load("/telemetryui/records/record_details/" + recordId, function( response, status, xhr ) {
+                 .load("/records/record_details/" + recordId, function( response, status, xhr ) {
                         if (status == "error") {
                               jQuery("#warning-text").text(response);
                               jQuery("#errorModal").modal();
@@ -195,7 +195,7 @@
                timerId = setInterval( function() {
                          if (pauseReload == false) {
                                  jQuery("#records-table")
-                                        .load("/telemetryui/records/lastid/0" + getSearch(), function( response, status, xhr ) {
+                                        .load("/records/lastid/0" + getSearch(), function( response, status, xhr ) {
                                                if (status == "error") {
                                                      jQuery("#warning-text").text(response);
                                                      jQuery("#errorModal").modal();

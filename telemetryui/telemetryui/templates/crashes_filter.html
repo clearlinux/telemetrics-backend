@@ -39,7 +39,7 @@
             <tr>
             <th scope="row">{{ loop.index }}</th>
             <td>
-                <a href="/telemetryui/crashes/guilty_details/{{ g.guilty_id }}">{{ g.guilty }}</a>
+                <a href="/crashes/guilty_details/{{ g.guilty_id }}">{{ g.guilty }}</a>
                 <button id="more_button" type="button" data-toggle="modal" data-target="#myModal" data-whatever="{{ g.comment }}" data-gid="{{ g.guilty_id }}">...</button>
             </td>
             <!-- SVG for {{ g.total }}/{{ maxtotal }} overall -->

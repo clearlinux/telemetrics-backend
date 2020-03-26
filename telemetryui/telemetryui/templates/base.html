@@ -21,19 +21,27 @@
   <body>
     <div class="container mt-2 mb-2">
       <ul class="nav nav-tabs" role="tablist">
-          <li class="nav-item"><a class="nav-link active" href="/telemetryui/records">Records</a></li>
-          <li class="nav-item"><a class="nav-link" href="/telemetryui/builds">Builds</a></li>
-          <li class="nav-item"><a class="nav-link" href="/telemetryui/stats">Stats</a></li>
-          <li class="nav-item"><a class="nav-link" href="/telemetryui/crashes">Crashes</a></li>
-          <li class="nav-item"><a class="nav-link" href="/telemetryui/mce">MCE</a></li>
-          <li class="nav-item"><a class="nav-link" href="/telemetryui/thermal">Thermal</a></li>
-          <li class="nav-item"><a class="nav-link" href="/telemetryui/population">Population</a></li>
+          <li class="nav-item"><a class="nav-link active" role="tab" href="/records">Records</a></li>
+          <li class="nav-item"><a class="nav-link" role="tab" href="/builds">Builds</a></li>
+          <li class="nav-item"><a class="nav-link" role="tab" href="/stats">Stats</a></li>
+          <li class="nav-item"><a class="nav-link" role="tab" href="/crashes">Crashes</a></li>
+          <li class="nav-item"><a class="nav-link" role="tab" href="/mce">MCE</a></li>
+          <li class="nav-item"><a class="nav-link" role="tab" href="/thermal">Thermal</a></li>
+          <li class="nav-item"><a class="nav-link" role="tab" href="/population">Population</a></li>
       </ul>
+      <!-- Tab panes -->
       {% block content %} {% endblock %}
-      <script>
-          telemetryUI.initTabs();
-      </script>
-     </div>
+    </div>
+    <script>
+    (function initTabs() {
+        if (window.location.pathname !== "/") {
+            var pathname = window.location.pathname;
+            var leading_path = pathname.split('/').slice(0,3).join('/');
+            jQuery("ul.nav.nav-tabs li a").removeClass("active");
+            jQuery('ul.nav.nav-tabs li a[href^="' + leading_path + '"]').addClass("active");
+        }
+    })();
+    </script>
   </body>
 </html>
 
