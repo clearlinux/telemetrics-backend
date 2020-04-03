@@ -4,9 +4,9 @@ FROM clearlinux:latest
 
 RUN swupd bundle-add nginx
 RUN useradd nginx
-COPY services/nginx/nginx.conf /etc/nginx/nginx.conf
-COPY services/nginx/sites.conf /etc/nginx/conf.d/sites.conf
-COPY services/nginx/*.pem /etc/nginx/ssl/
+COPY deployments/services/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY deployments/services/nginx/sites.conf /etc/nginx/conf.d/sites.conf
+COPY deployments/services/nginx/*.pem /etc/nginx/ssl/
 COPY telemetryui/telemetryui/static /var/www/static
 RUN chown -R nginx:nginx /var/www/static
 
