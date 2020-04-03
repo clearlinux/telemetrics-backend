@@ -4,8 +4,8 @@ WORKDIR /var/www/collector
 
 RUN swupd bundle-add python3-basic uwsgi
 RUN mkdir -p /var/www/collector/log /var/www/collector/socket
-COPY ./services/collector/requirements.txt .
-COPY ./services/collector/collector.ini .
+COPY ./deployments/services/collector/requirements.txt .
+COPY ./deployments/services/collector/collector.ini .
 COPY ./collector/collector /var/www/collector/collector
 COPY ./utils/shared_utils/model.py /var/www/collector/collector/
 RUN pip3 install -r requirements.txt

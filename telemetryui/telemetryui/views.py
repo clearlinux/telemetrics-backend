@@ -113,6 +113,7 @@ def crashes_page(offset=0):
 @app.route('/crashes/<string:filter>', methods=['GET', 'POST'])
 def crashes(filter=None):
     form = forms.GuiltyDetailsForm()
+    backtrace_classes = crash.get_backtrace_classes()
     if request.method == 'POST':
         if form.validate_on_submit() is False:
             for e in form.comment.errors:
@@ -150,9 +151,9 @@ def crashes(filter=None):
             uncache_data(GUILTY_CACHE_KEY)
             return redirect(endpoint)
 
-    backtrace_classes = crash.get_backtrace_classes()
     tmp = get_cached_data(GUILTY_CACHE_KEY, 600, Record.get_top_crash_guilties,
                           classes=backtrace_classes)
+    tmp = Record.get_top_crash_guilties(classes=backtrace_classes)
 
     if filter:
         guilties = crash.guilty_list_for_build(tmp, filter)

@@ -78,6 +78,7 @@ def process_crashes(cur, crashes, schema="public", debug=False):
     insert_guilty = INSERT_GUILTY.format(schema)
     for rid, backtrace, _ in crashes:
         if backtrace is None:
+            print("## backtrace record {} is None".format(rid))
             continue
         function, module = parse_crash(backtrace)
         if function is not None and module is not None:
@@ -93,11 +94,11 @@ def process_crashes(cur, crashes, schema="public", debug=False):
             ### Update record table with guilty_id
             cur.execute(UPDATE_GUILTY, (gid, rid,))
         else:
-            print("# function or module is None for record id {}".format(rid))
+            print("## function or module is None for record id {}".format(rid))
 
     ### Update latest processed record table with record_id
     cur.execute(UPDATE_PROCESSED_RECORD, (rid,))
-    print("#### Updating last processed id to {}\n".format(rid))
+    print("## Updating last processed id to {}\n".format(rid))
 
 
 def connect(conf):

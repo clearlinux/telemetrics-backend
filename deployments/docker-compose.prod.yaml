@@ -4,18 +4,28 @@ services:
     image: postgres:latest
     networks:
       - backend
+    restart: always
+    volumes:
+      - type: volume
+        source: telemetry-data
+        target: /var/lib/postgresql/data/pgdata
     env_file:
-      - ./services/testing.env
+      - ./services/production.env
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_DB: telemetry
 
   nginx:
     image: telemetry/proxy:1.0
     networks:
       - frontend
+    restart: always
+    build:
+      context: ..
+      dockerfile: ./deployments/services/nginx/Dockerfile
     volumes:
       - "telemetry-socket-volume:/var/run/uwsgi/"
-    build:
-      context: .
-      dockerfile: ./services/nginx/Dockerfile
+      - "telemetry-nginx-logs:/var/log/nginx"
     ports:
       - 80:80
       - 443:443
@@ -24,8 +34,9 @@ services:
     image: redis:latest
     networks:
       - backend
+    restart: always
     env_file:
-      - ./services/testing.env
+      - ./services/production.env
 
   collector:
     image: telemetry/collector:1.0
@@ -33,11 +44,13 @@ services:
       - backend
     volumes:
       - "telemetry-socket-volume:/var/www/collector/socket"
+      - "telemetry-uwsgi-logs:/var/www/collector/log"
+    restart: always
     build:
-      context: .
-      dockerfile: ./services/collector/Dockerfile
+      context: ..
+      dockerfile: ./deployments/services/collector/Dockerfile
     env_file:
-      - services/testing.env
+      - services/production.env
     depends_on: ["db", "redis"]
     command: uwsgi --ini /var/www/collector/collector.ini
 
@@ -47,11 +60,13 @@ services:
       - backend
     volumes:
       - "telemetry-socket-volume:/var/www/webapp/socket"
+      - "telemetry-uwsgi-logs:/var/www/webapp/log"
+    restart: always
     build:
-      context: .
-      dockerfile: ./services/webapp/Dockerfile
+      context: ..
+      dockerfile: ./deployments/services/webapp/Dockerfile
     env_file:
-      - ./services/testing.env
+      - ./services/production.env
     depends_on: ["db", "redis"]
     command: uwsgi --ini /var/www/webapp/webapp.ini
 
@@ -60,10 +75,10 @@ services:
     networks:
       - backend
     build:
-      context: .
-      dockerfile: ./services/processing/Dockerfile
+      context: ..
+      dockerfile: ./deployments/services/processing/Dockerfile
     env_file:
-      - ./services/testing.env
+      - ./services/production.env
     depends_on: ["db", "migrate"]
     command: /srv/processing/run.sh
 
@@ -72,15 +87,19 @@ services:
     networks:
       - backend
     env_file:
-      - ./services/testing.env
+      - ./services/production.env
     environment:
       FLASK_APP: /var/www/webapp/run.py
     working_dir: /var/www/webapp
     depends_on: ["db"]
-    command: /var/www/webapp/migrate_entrypoint.sh
+    restart: on-failure
+    command: flask db upgrade
 
 volumes:
   telemetry-socket-volume:
+  telemetry-uwsgi-logs:
+  telemetry-nginx-logs:
+  telemetry-data:
 
 networks:
   frontend:

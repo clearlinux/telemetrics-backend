@@ -12,9 +12,9 @@ that exposes several views to visualize the telemetry data. The `telemetryui`
 app also provides a REST API to perform queries on the data.
 
 The Flask apps have several dependencies listed [here](services/collector/requirements.txt)
-and [here](services/telemetryui/requirements.txt). The testing infrastructure
-is described by [this](docker-compose.yaml) docker-compose.yaml and production by
-[this](docker-compose.prod.yaml) docker-compose.prod.yaml
+and [here](deployments/services/telemetryui/requirements.txt). The testing infrastructure
+is described by [this](deployments/docker-compose.yaml) docker-compose.yaml and production by
+[this](deployments/docker-compose.prod.yaml) docker-compose.prod.yaml
 
 ## Security considerations
 
@@ -49,14 +49,14 @@ the build step will fail.
 vi services/production.env
 
 # build production environment
-sudo -E docker-compose --file ./docker-compose.prod.yaml build --force-rm
+sudo -E docker-compose --file ./deployments/docker-compose.prod.yaml build --force-rm
 ```
 
 Once the images are build successfully the environment can be started using:
 
 ```
 # start environment on the background
-sudo -E docker-compose --file ./docker-compose.prod.yaml up --detach
+sudo -E docker-compose --file ./deployments/docker-compose.prod.yaml up --detach
 ```
 
 ### Deploying as systemd service
@@ -72,8 +72,8 @@ After=docker.service
 [Service]
 Restart=always
 WorkingDirectory=/srv/telemetrics-backend
-ExecStart=/usr/local/bin/docker-compose --file docker-compose.prod.yaml up
-ExecStop=/usr/local/bin/docker-compose --file docker-compose.prod.yaml down -v
+ExecStart=/usr/local/bin/docker-compose --file deployments/docker-compose.prod.yaml up
+ExecStop=/usr/local/bin/docker-compose --file deployments/docker-compose.prod.yaml down -v
 
 [Install]
 WantedBy=multi-user.target
@@ -230,10 +230,10 @@ started, this applies for both production and testing configurations.
 
 ```
 # Build
-sudo -E docker-compose build --force-rm
+sudo -E docker-compose --file deployments/docker-compose.yaml build --force-rm
 
 # Launch
-sudo -E docker-compose up
+sudo -E docker-compose --file deployments/docker-compose.yaml up
 ```
 
 ## Software License
