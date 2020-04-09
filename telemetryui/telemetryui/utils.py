@@ -75,12 +75,12 @@ def records_post(form, request):
             "to_date": to_date if to_date != "" else None,
             "data_source": data_source if data_source != "All" else None,
         }   
-        dest = 'records'
+        dest = 'views_bp.records'
 
         if 'csv_attachment' in request.form:
             redirect_args['format_type'] = 'attach'
             redirect_args['timestamp'] = time.time()
-            dest = 'export_csv'
+            dest = 'views_bp.export_csv'
 
         url = url_for(dest, **redirect_args)
         return redirect(url)

@@ -8,7 +8,7 @@
 <tr>
 <th scope="row">{{ loop.index + page_offset }}</th>
 <td>
-<a href="/crashes/guilty_details/{{ g.guilty_id }}" data-toggle="tooltip" data-placement="left" title="{{ g.guilty }}">{{ g.guilty|truncate(30, True) }}</a>
+<a href="{{ url_for('views_bp.crashes') }}/guilty_details/{{ g.guilty_id }}" data-toggle="tooltip" data-placement="left" title="{{ g.guilty }}">{{ g.guilty|truncate(30, True) }}</a>
 <button id="more_button" type="button" data-toggle="modal" data-target="#myModal" data-whatever="{{ g.comment }}" data-gid="{{ g.guilty_id }}" style="width: 34px;">...</button>
 </td>
 <!-- SVG for {{ g.total }}/{{ maxtotal }} overall -->

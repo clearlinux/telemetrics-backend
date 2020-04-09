@@ -31,7 +31,7 @@
 {%- if query %}
     <tr>
       <th>Backtraces</th>
-      <td><a href="{{ url_for('guilty_backtraces', id=guilty_id) }}">view</a></td>
+      <td><a href="{{ url_for('views_bp.guilty_backtraces', id=guilty_id) }}">view</a></td>
     </tr>
 {% endif %}
   </tbody>
@@ -58,8 +58,8 @@
         <tr>
             <th scope="row">{{ loop.index }}</th>
             <td><tt>{{ row.machine_id }}</tt></td>
-            <td><a href="{{ url_for('records', page=1, machine_id=row.machine_id) }}">view</a></td>
-            <td><a href="{{ url_for('guilty_backtraces', id=guilty_id, machine_id=row.machine_id, build=group.grouper) }}">view</a></td>
+            <td><a href="{{ url_for('views_bp.records', page=1, machine_id=row.machine_id) }}">view</a></td>
+            <td><a href="{{ url_for('views_bp.guilty_backtraces', id=guilty_id, machine_id=row.machine_id, build=group.grouper) }}">view</a></td>
             <!-- SVG for {{ row.total }}/{{ maxtotal }} overall -->
             <td>
                 <span data-toggle="tooltip" data-placement="left" title="{{ row.total }}">

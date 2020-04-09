@@ -30,10 +30,10 @@
         <thead>
             <th>#</th>
             <th>Guilty</th>
-            <th><a href="{{ url_for('crashes', filter='overall') }}">Total</a></th>
+            <th><a href="{{ url_for('views_bp.crashes', filter='overall') }}">Total</a></th>
             {%- for b in builds %}
             {%- set currentbuild = b[0] %}
-            <th><a href="{{ url_for('crashes', filter=currentbuild) }}">{{ b[0] }}</a></th>
+            <th><a href="{{ url_for('views_bp.crashes', filter=currentbuild) }}">{{ b[0] }}</a></th>
             {%- endfor %}
             <th>Comment</th>
         </thead>
@@ -68,28 +68,27 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                     <h4 class="modal-title" id="myModalLabel">Guilty comment</h4>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
                 <div class="modal-body">
                     <form role="form" action="" method="post" name="edit-comment">
+                        {{ form.csrf_token }}
                         {{ form.hidden_tag() }}
-                        <div class="form-group col-md-6" id="text-field">
+                        <div class="form-group" id="text-field">
                             {{ form.comment.label(class="control-label", for="comment_field") }}
                             {{ form.comment(id="comment_field", class="form-control") }}
                         </div>
-                        <div class="form-group col-md-6" id="hideguilty-field">
+                        <div class="form-group" id="hideguilty-field">
                             {{ form.hidden.label(class="control-label", for="hideguilty_field") }}
                             {{ form.hidden(id="hideguilty_field", class="form-control") }}
                         </div>
                         <div class="form-group" id="submit-field">
                             {{ form.guilty_id(id="guilty_id", class="form-control") }}
-                            <button type="submit" class="btn btn-primary">Submit</button>
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                            <button type="submit" class="btn btn-primary float-right">Submit</button>
                         </div>
                     </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -119,7 +118,7 @@
 
     jQuery("#loadMore").on("click", function(event) {
         jQuery.ajax({ type: "GET",
-                        url: "/crashes/offset/" + lastOffset,
+                        url: "/{{ url_for('views_bp.crashes') }}/offset/" + lastOffset,
                         async: true,
                         success : function(result) {
                              lastOffset++;
