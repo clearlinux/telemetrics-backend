@@ -18,10 +18,10 @@
 
 <h4>Crash guilty management</h4>
 <ul>
-  <li><a href="{{ url_for('guilty_add') }}">Add new guilty filters</a></li>
-  <li><a href="{{ url_for('guilty_remove') }}">Remove guilty filters</a></li>
-  <li><a href="{{ url_for('guilty_hidden') }}">Manage hidden guilties</a></li>
-  <li><a href="{{ url_for('guilty_reset') }}">Reset guilties</a></li>
+  <li><a href="{{ url_for('views_bp.guilty_add') }}">Add new guilty filters</a></li>
+  <li><a href="{{ url_for('views_bp.guilty_remove') }}">Remove guilty filters</a></li>
+  <li><a href="{{ url_for('views_bp.guilty_hidden') }}">Manage hidden guilties</a></li>
+  <li><a href="{{ url_for('views_bp.guilty_reset') }}">Reset guilties</a></li>
 </ul>
 
 {%- with messages = get_flashed_messages(with_categories=true) %}

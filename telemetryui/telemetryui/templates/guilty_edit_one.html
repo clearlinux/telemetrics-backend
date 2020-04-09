@@ -32,7 +32,7 @@
 <div class="alert alert-info col-md-offset-2 col-md-8" role="alert">
 <p>Notes:</p>
 <ul>
-<li>Frames are taken from record <a href="{{ url_for('record_details', record_id=record_id) }}">{{ record_id }}</a>.</li>
+<li>Frames are taken from record <a href="{{ url_for('views_bp.record_details', record_id=record_id) }}">{{ record_id }}</a>.</li>
 <li>Selected frames indicate guilties that should be <em>blacklisted</em>. Unselected frames are guilty candidates.</li>
 <li>If you would like to recalculate the guilty for this record, click "Apply" to update the blacklist, reprocess, and display the new result.</li>
 <li>When finished updating the blacklist, click "Submit" to reprocess all crash records in the database.</li>

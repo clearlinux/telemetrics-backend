@@ -13,7 +13,7 @@
   </tr>
   <tr class="col-sm-5">
     <th>Machine Id</th>
-    <td><a  href="{{ url_for('records', page=1, machine_id=record.machine_id) }}">{{  record.machine_id }}</a></td>
+    <td><a  href="{{ url_for('views_bp.records', page=1, machine_id=record.machine_id) }}">{{  record.machine_id }}</a></td>
   </tr>
   <tr class="col-sm-5">
     <th>Machine Type</th>
@@ -53,21 +53,21 @@
   </tr>
   <tr class="col-sm-5">
     <th>Build</th>
-    <td><a href="{{ url_for('records', page=1, build=record.build) }}">{{ record.build }}</a></td>
+    <td><a href="{{ url_for('views_bp.records', page=1, build=record.build) }}">{{ record.build }}</a></td>
   </tr>
   <tr class="col-sm-5">
     <th>Severity</th>
-    <td><a href="{{ url_for('records', page=1, severity=record.severity) }}">{{ record.severity }}</a></td>
+    <td><a href="{{ url_for('views_bp.records', page=1, severity=record.severity) }}">{{ record.severity }}</a></td>
   </tr>
   <tr class="col-sm-5">
     <th>Classification</th>
-    <td><a id="class_link" href="{{ url_for('records', page=1, classification=record.classification) }}">{{ record.classification }}</a></td>
+    <td><a id="class_link" href="{{ url_for('views_bp.records', page=1, classification=record.classification) }}">{{ record.classification }}</a></td>
   </tr>
   <tr class="col-sm-5">
     <th>Guilty Id</th>
     <td>
         {%- if record.guilty_id %}
-        <a href="{{ url_for('guilty_details', id=record.guilty_id) }}">{{ record.guilty_id }}</a>
+        <a href="{{ url_for('views_bp.guilty_details', id=record.guilty_id) }}">{{ record.guilty_id }}</a>
         {%- else %}
         N/A
         {%- endif %}

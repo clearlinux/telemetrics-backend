@@ -3,14 +3,13 @@
 
 import os
 import logging
-import secrets
 
 class Config(object):
-    db_host = os.environ['POSTGRES_HOSTNAME']
-    db_user = os.environ['POSTGRES_USER']
-    db_passwd = os.environ['POSTGRES_PASSWORD']
-    redis_passwd = os.environ['REDIS_PASSWD']
-    redis_hostname = os.environ['REDIS_HOSTNAME']
+    db_host = os.environ.get('POSTGRES_HOSTNAME', 'db')
+    db_user = os.environ.get('POSTGRES_USER', 'telemetry')
+    db_passwd = os.environ.get('POSTGRES_PASSWORD','postgres')
+    redis_passwd = os.environ.get('REDIS_PASSWD', '')
+    redis_hostname = os.environ.get('REDIS_HOSTNAME', 'redis')
     DEBUG = False
     TESTING = False
     LOG_LEVEL = logging.ERROR
@@ -18,7 +17,8 @@ class Config(object):
     SQLALCHEMY_TRACK_MODIFICATIONS = True
     LOG_FILE = 'handler.log'
     WTF_CSRF_ENABLED = True
-    SECRET_KEY = secrets.token_hex(32)
+    SECRET_KEY = os.urandom(32)
+    APPLICATION_ROOT = os.environ.get('APPLICATION_ROOT', '')
     RECORDS_PER_PAGE = 50
     REDIS_HOSTNAME = redis_hostname
     REDIS_PORT = 6379

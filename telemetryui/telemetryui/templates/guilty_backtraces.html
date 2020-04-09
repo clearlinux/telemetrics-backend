@@ -1,18 +1,8 @@
 {#-
- # Copyright 2015-2017 Intel Corporation
- #
- # Licensed under the Apache License, Version 2.0 (the "License");
- # you may not use this file except in compliance with the License.
- # You may obtain a copy of the License at
- #
- #     http://www.apache.org/licenses/LICENSE-2.0
- #
- # Unless required by applicable law or agreed to in writing, software
- # distributed under the License is distributed on an "AS IS" BASIS,
- # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- # See the License for the specific language governing permissions and
- # limitations under the License.
+ # Copyright (C) 2015-2020 Intel Corporation
+ # SPDX-License-Identifier: Apache-2.0
 -#}
+
 {% extends "base.html" %}
 
 {%- block page_title %}
@@ -36,8 +26,12 @@
         <td>{{ b.program }}</td>
         <td>{{ b.signal }}</td>
         <td>
-            <a href="{{ url_for('record_details', record_id=b.record_id) }}" class="btn btn-primary" role="button">Record details</a>
-            <a href="{{ url_for('guilty_edit', record_id=b.record_id, guilty_id=guiltyid) }}" class="btn btn-default" role="button">Update blacklist</a>
+            <div>
+            <button type="button" class="btn-sm btn-primary" data-toggle="modal" data-target="#recordModal"
+                    data-recordid="{{ b.record_id }}">Record details</button>
+            <a href="{{ url_for('views_bp.guilty_edit', record_id=b.record_id, guilty_id=guiltyid) }}"
+               class="btn btn-sm btn-danger" role="button">Update blacklist</a>
+            </div>
 <pre>
         {%- for f in b.backtrace %}
 #{{ loop.index0 }} {{ f[0] }} - [{{ f[1] }}]{% if f[2] %} - {{ f[2]|basename }}{% endif %}
@@ -49,10 +43,40 @@
     </tbody>
 </div>
 
+<!-- Record Details -->
+<div class="modal fade" id="recordModal" tabindex="-1" role="dialog" aria-labelledby="recordModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Record Details</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div id="recordDetails" class="modal-body"></div>
+            <div class="modal-footer">
+                   <button type="button" class="btn btn-light" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+ </div>
+
 <script>
-$("pre").html(function(_, html) {
-    return html.replace(/({{ funcmod }})/, '<span class="bg-danger">$1<span class="glyphicon glyphicon-arrow-left"></span></span>');
-});
+
+    jQuery("pre").html(function(_, html) {
+           return html.replace(/({{ funcmod }})/, '<span class="bg-danger">$1<span class="glyphicon glyphicon-arrow-left"></span></span>');
+    });
+
+    /* Record details */
+    jQuery("#recordModal").on("show.bs.modal", function(event) {
+          var button = jQuery(event.relatedTarget);
+          var recordId = button.data("recordid");
+          jQuery("#recordDetails")
+                 .load("{{ url_for('views_bp.records') }}/record_details/" + recordId, function( response, status, xhr ) {
+                        if (status == "error") {
+                              jQuery("#warning-text").text(response);
+                              jQuery("#errorModal").modal();
+                        }
+                 });
+    });
 </script>
 {% endblock %}
 
